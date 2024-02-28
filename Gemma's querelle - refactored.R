@@ -1058,12 +1058,6 @@ for (i in (1762:1789)) {
 
 ### Fixing the slider of ndtv: including no decimal points.
 
-## What if I just include only 1 decimal point? (2 decimal points doesn't work)
-
-#es_year_splits$onset <- round(es_year_splits$onset, 1)
-#QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$Actor_code), es_year_splits$Actor_code)]
-## Unfortunately doesn't work .
-
 #Standard solution: round to one decimal point and Multiply all years by 10 
 
 es_year_splits$onset <- round(es_year_splits$onset, 1)*10
@@ -1158,8 +1152,6 @@ for (char in chars[,1]) {
 
 
 ### Make animation
-#compute.animation(QDC_text_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
-#compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
 ## Let's make texts appear month by month (i.e. interval of 0.08333333)
 compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1789.9, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
 ## Let's try MDSJ visualisation algorithm
@@ -1205,8 +1197,6 @@ network::delete.vertices(QDC_text_dyn, w)
 
 
 ### Make animation
-#compute.animation(QDC_text_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
-#compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
 ## Let's make texts appear month by month (i.e. interval of 0.08333333)
 
 par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1)) 
@@ -1240,9 +1230,6 @@ render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
 
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
-#compute.animation(QDC_text_dyn, slice.par=list(start=1762.000, end=1765.000, interval=0.1, aggregate.dur=0.1, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-#QDC_text_anim2 <- compute.animation(QDC_text_dyn, slice.par=list(start=17890, end=17899, interval=1, aggregate.dur=1, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-#QDC_text_anim2 <- compute.animation(QDC_text_dyn, slice.par=list(start=17898, end=17899, interval=1, aggregate.dur=1, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 #QDC_text_dyn %v% "animX" <- get.vertex.attribute.active(QDC_text_anim2, "animation.x", onset = 17898, terminus = 17899)
 #QDC_text_dyn %v% "animY" <- get.vertex.attribute.active(QDC_text_anim2, "animation.y", onset = 17898, terminus = 17899)
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animX", y = "animY"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
