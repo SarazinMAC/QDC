@@ -1,0 +1,1425 @@
+#library(data.table)
+library(intergraph)
+
+library(rio)
+#library(openxlsx)
+#library(igraph)
+library(sna)
+#library(threejs)
+library(statnet.common)
+library(network)
+library(ndtv)
+#library(visNetwork)
+library(networkDynamic)
+
+#detach("package:ndtv", unload=TRUE)
+#detach("package:networkDynamic", unload=TRUE)
+#library(ndtv)
+#library(networkDynamic)
+
+# Configurable values
+Data_name <- "QDC_2022_11_06.xlsx"
+Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
+
+QDC_file <- import(paste0(Data_path, Data_name))
+
+
+# Clean dataset of empty rows
+
+empty_rows <- apply(QDC_file, 1, function(x) {all(is.na(x))}) # records TRUE if the row is full of NAs
+QDC <- QDC_file[!empty_rows,] # Only keep rows that return false to the line above
+
+
+
+##### Cleaning base dataset #####
+
+##Delete College de Soreze and La Fleche if they are in there
+#QDC <- QDC[-which((QDC$`ACTOR-PERSON`=="Coll?ge de Sor?ze" | QDC$`TIE-PERSON`=="Coll?ge de Sor?ze")),]
+#QDC <- QDC[-which((QDC$`ACTOR-PERSON`=="Coll?ge de la Fl?che" | QDC$`TIE-PERSON`=="Coll?ge de la Fl?che")),]
+
+
+
+##### Creating datasets #####
+
+## Restricting dataset to 1762 - 1789, or, for testing, another date range
+QDC_62_89 <- QDC[which(QDC$Date>1761),]
+#QDC_62_89 <- QDC[which(QDC$Date>1771 & QDC$Date<1774),]
+
+
+#### __Text-based Querelle ####
+
+#### ____Node database - for all potential text nodes (actor-texts, tie-texts, response texts) ####
+
+# Two steps: Create a database of all nodal attribute information, then create a list of actors (that both send and receive ties) and populate with nodal attributes
+## First create a single attribute record for every entry in Actor-text column (which normally includes all actors in tie text and response text)
+QDC_text <- subset(QDC, select=
+                     c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", "Gender", "Response-TEXT 1", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Place"))
+QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
+
+#QDC_text_nodes_2 <- QDC_text[!duplicated(QDC_text$`ACTOR-TEXT`),]
+
+QDC_text_node_data <- as.data.frame(table(QDC_text$`ACTOR-TEXT`, QDC_text$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_text$Gender, QDC_text$Date)) #This creates a problem when nodes have missing data for any attribute; if they do, then it gives missing values to all attributes
+QDC_text_node_data <- QDC_text_node_data[QDC_text_node_data$Freq>0,1:4]
+colnames(QDC_text_node_data) <- c("Text_Name", "Actor_type", "Gender", "Date")
+
+
+
+
+## Now create list of actors that you want to use to populate the Node database
+QDC_text_nodes <- as.data.frame(unique(append(QDC_text$`ACTOR-TEXT`, c(QDC_text$`TIE-TEXT`, QDC_text$`Response-TEXT 1`, QDC_text$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`))))
+QDC_text_nodes <- data.frame(QDC_text_nodes[!is.na(QDC_text_nodes)])
+colnames(QDC_text_nodes) <- "Actors"
+
+## Now fill with attributes using matching
+QDC_text_nodes[,2] <- QDC_text_node_data$Actor_type[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes[,3] <- QDC_text_node_data$Gender[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes[,4] <- QDC_text_node_data$Date[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes$V2 <- as.numeric(QDC_text_nodes$V2)
+QDC_text_nodes$V2[which(is.na(QDC_text_nodes$V2))] <- 99 #missing data coded 99
+QDC_text_nodes$V3 <- as.numeric(QDC_text_nodes$V3)
+QDC_text_nodes$V3[which(is.na(QDC_text_nodes$V3))] <- 99 #missing data coded 99
+QDC_text_nodes$V4 <- as.numeric(as.character(QDC_text_nodes$V4))
+QDC_text_nodes$V4[which(is.na(QDC_text_nodes$V4))] <- 99 #missing data coded 99
+
+colnames(QDC_text_nodes) <- c("Text_Name", "Actor_type", "Gender", "Date")
+QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
+QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
+QDC_text_nodes <- QDC_text_nodes[order(QDC_text_nodes$Text_Name),]
+
+
+#### ____Create network object ####
+
+QDC_text <- subset(QDC_62_89, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
+QDC_text <- QDC_text[!is.na(QDC_text$`TIE-TEXT`),]
+QDC_text <- QDC_text[!is.na(QDC_text$Quality),]
+QDC_text[,"Line_type"] <- "solid"
+
+### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+QDC_text$Quality <- QDC_text$Quality + 3
+QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
+
+### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
+
+QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date")]
+QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
+QDC_text_resp <- unique(QDC_text_resp)
+
+QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date")]
+QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
+QDC_text_resp_2 <- unique(QDC_text_resp_2)
+
+colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date"); colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
+
+QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
+
+QDC_text_resp[,"Quality"] <- 9
+QDC_text_resp[,"Line_type"] <- "dashed"
+
+QDC_text <- rbind(QDC_text, QDC_text_resp)
+rm(QDC_text_resp_2, QDC_text_resp)
+
+QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+#QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+
+### Creating node attr database - note, you need list of vertices to do this.
+
+QDC_text_attr <- as.data.frame(QDC_text_net %v% "vertex.names")
+colnames(QDC_text_attr) <- "Text_Name"
+## Import Actor type
+QDC_text_attr$Text_Name <- as.character(QDC_text_attr$Text_Name)
+QDC_text_attr[,"Actor_type"] <- QDC_text_nodes$Actor_type[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
+QDC_text_attr$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_attr$Actor_type]
+
+## Create a vertex attribute for the number of sides of the vertex - if the actor is an authority or institution (i.e. actor type 2), then a pentagon, otherwise a circle
+QDC_text_attr[,"Vertex_sides"] <- ifelse(QDC_text_attr$Actor_type==2, 4, 50) # 50 means 50 sides, which for some reason ends up appearing as a circle
+## Create label - only for D'Alembert (1753), La Chalotais (1763), and Rousseau (1762)
+QDC_text_attr[, "Label"] <- ifelse(QDC_text_attr$Text_Name=="D'Alembert (1753)"|QDC_text_attr$Text_Name=="La Chalotais (1763)"|QDC_text_attr$Text_Name=="Rousseau (1762)", QDC_text_attr$Text_Name, "")
+## Create vertex attribute for the corpus number of the text in question.
+QDC_text_attr[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
+
+## Check that actors in the node df and network are in the same order
+all(QDC_text_net %v% "vertex.names"==QDC_text_attr$Text_Name)
+
+## Create tie name edge variable for network object
+
+QDC_text[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text[, "Tie_name"] <- paste0(QDC_text$Actor_Corpus_num, " &#8594 ", QDC_text$Tie_Corpus_num)
+QDC_text$Actor_Corpus_num=NULL; QDC_text$Tie_Corpus_num=NULL
+
+
+## NOW finally create network object
+
+QDC_text_net <- network(QDC_text, matrix.type= "edgelist", vertex.attr = QDC_text_attr, loops=F, multiple=F, ignore.eval = F)
+
+## Colour according to actor type
+QDC_text_net %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net %v% "Actor_type"]
+
+## Colour according to tie quality
+QDC_text_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net %e% "Quality"]
+
+
+
+
+
+
+
+
+##### ____Divide network by period - TODO: turn into custom function #####
+
+#### ______62_64 network ####
+
+#QDC_text_62_64 <- QDC_text[QDC_text$Date<1765,] 
+#QDC_text_net_62_64 <- network(QDC_text_62_64, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+#QDC_text_attr_62_64 <- QDC_text_attr[QDC_text_attr$Text_Name %in% (QDC_text_net_62_64 %v% "vertex.names"),]
+#QDC_text_net_62_64 <- network(QDC_text_62_64, matrix.type= "edgelist", vertex.attr = QDC_text_attr_62_64, loops=F, multiple=F, ignore.eval = F)
+
+#QDC_text_net_62_64 %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net_62_64 %v% "Actor_type"]
+#QDC_text_net_62_64 %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net_62_64 %e% "Quality"]
+
+#### ______62_69 network ####
+
+#QDC_text_62_69 <- QDC_text[QDC_text$Date<1770,] 
+#QDC_text_net_62_69 <- network(QDC_text_62_69, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+#QDC_text_attr_62_69 <- QDC_text_attr[QDC_text_attr$Text_Name %in% (QDC_text_net_62_69 %v% "vertex.names"),]
+#QDC_text_net_62_69 <- network(QDC_text_62_69, matrix.type= "edgelist", vertex.attr = QDC_text_attr_62_69, loops=F, multiple=F, ignore.eval = F)
+#
+#QDC_text_net_62_69 %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net_62_69 %v% "Actor_type"]
+#QDC_text_net_62_69 %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net_62_69 %e% "Quality"]
+
+#### ______70_79 network ####
+
+#QDC_text_70_79 <- QDC_text[QDC_text$Date>=1770 & QDC_text$Date<1780,] 
+#QDC_text_net_70_79 <- network(QDC_text_70_79, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+#QDC_text_attr_70_79 <- QDC_text_attr[QDC_text_attr$Text_Name %in% (QDC_text_net_70_79 %v% "vertex.names"),]
+#QDC_text_net_70_79 <- network(QDC_text_70_79, matrix.type= "edgelist", vertex.attr = QDC_text_attr_70_79, loops=F, multiple=F, ignore.eval = F)#
+
+#QDC_text_net_70_79 %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net_70_79 %v% "Actor_type"]
+#QDC_text_net_70_79 %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net_70_79 %e% "Quality"]#
+
+#### ______80_89 network ####
+#
+#QDC_text_80_89 <- QDC_text[QDC_text$Date>=1780 & QDC_text$Date<1790,] 
+#QDC_text_net_80_89 <- network(QDC_text_80_89, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+#QDC_text_attr_80_89 <- QDC_text_attr[QDC_text_attr$Text_Name %in% (QDC_text_net_80_89 %v% "vertex.names"),]
+#QDC_text_net_80_89 <- network(QDC_text_80_89, matrix.type= "edgelist", vertex.attr = QDC_text_attr_80_89, loops=F, multiple=F, ignore.eval = F)
+#
+#QDC_text_net_80_89 %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net_80_89 %v% "Actor_type"]
+#QDC_text_net_80_89 %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net_80_89 %e% "Quality"]
+
+
+
+
+
+
+
+
+
+#### __Person-based Querelle ####
+
+
+
+#### ____Node database - for all potential person nodes (actor-persons, tie-persons, response persons) ####
+
+## First create a single attribute record for every entry in Actor-text column (which normally includes all actors in tie text and response text)
+QDC_pers <- subset(QDC, select=c("ACTOR-PERSON", "TIE-PERSON", "Quality", "Date", "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", "Gender", "Response-PERSON 1", "Response-PERSON 2"))
+QDC_pers <- QDC_pers[!is.na(QDC_pers$`ACTOR-PERSON`),]
+
+QDC_pers_nodes <- as.data.frame(table(QDC_pers$`ACTOR-PERSON`, QDC_pers$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_pers$Gender, QDC_pers$Date))
+QDC_pers_nodes <- QDC_pers_nodes[QDC_pers_nodes$Freq>0,1:4]
+colnames(QDC_pers_nodes) <- c("Pers_Name", "Actor_type", "Gender", "Date")
+
+
+
+## Now create list of actors that you want to use to populate the Node database
+x <- as.data.frame(unique(append(QDC_pers$`ACTOR-PERSON`, c(QDC_pers$`TIE-PERSON`, QDC_pers$`Response-PERSON 1`, QDC_pers$`Response-PERSON 2`))))
+x <- data.frame(x[!is.na(x)])
+colnames(x) <- "Actors"
+
+## Now fill with attributes using matching
+x[,2] <- QDC_pers_nodes$Actor_type[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
+x[,3] <- QDC_pers_nodes$Gender[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
+x[,4] <- QDC_pers_nodes$Date[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
+x$V2 <- as.numeric(x$V2)
+x$V2[which(is.na(x$V2))] <- 99 #missing data coded 99
+x$V3 <- as.numeric(x$V3)
+x$V3[which(is.na(x$V3))] <- 99 #missing data coded 99
+x$V4 <- as.numeric(as.character(x$V4))
+x$V4[which(is.na(x$V4))] <- 99 #missing data coded 99
+QDC_pers_nodes <- x
+colnames(QDC_pers_nodes) <- c("Pers_Name", "Actor_type", "Gender", "Date")
+QDC_pers_nodes$Pers_Name <- as.character(QDC_pers_nodes$Pers_Name)
+QDC_pers_nodes <- QDC_pers_nodes[order(QDC_pers_nodes$Pers_Name),]
+rm(x)
+
+#### ____Node attributes for network object ####
+
+#QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
+
+
+#### ____network object ####
+
+QDC_pers <- subset(QDC_62_89, select=c("ACTOR-PERSON", "TIE-PERSON", "Quality", "Date"))
+QDC_pers <- QDC_pers[!is.na(QDC_pers$`ACTOR-PERSON`),]
+QDC_pers <- QDC_pers[!is.na(QDC_pers$`TIE-PERSON`),]
+QDC_pers <- QDC_pers[!is.na(QDC_pers$Quality),]
+QDC_pers[,"Line_type"] <- "solid"
+##Delete College de Soreze and La Fleche if they are in there
+#QDC_pers <- QDC_pers[-(which(QDC_pers$`ACTOR-PERSON`=="Coll?ge de Sor?ze" | QDC_pers$`TIE-PERSON`=="Coll?ge de Sor?ze")),]
+#QDC_pers <- QDC_pers[-(which(QDC_pers$`ACTOR-PERSON`=="Coll?ge de la Fl?che" | QDC_pers$`TIE-PERSON`=="Coll?ge de la Fl?che")),]
+
+### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+QDC_pers$Quality <- QDC_pers$Quality + 3
+QDC_pers$Quality[QDC_pers$Quality>6] <- QDC_pers$Quality[QDC_pers$Quality>6]-1
+
+### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2 # Note: have to add Actor text in there so the "unique" command works, as La Chalotais sends a response to the Parlement de Bretagne twice but in two different texts (then delete the variable)
+
+QDC_pers_resp <- data.frame(QDC$`ACTOR-PERSON`, QDC$`Response-PERSON 1`, QDC$`ACTOR-TEXT`, QDC$`Response-TEXT 1`,  QDC$Date)
+QDC_pers_resp <- QDC_pers_resp[!is.na(QDC_pers_resp$QDC..Response.PERSON.1.),]
+QDC_pers_resp <- unique(QDC_pers_resp)
+QDC_pers_resp$QDC..ACTOR.TEXT.=NULL; QDC_pers_resp$QDC..Response.TEXT.1.=NULL
+
+QDC_pers_resp_2 <- data.frame(QDC$`ACTOR-PERSON`, QDC$`Response-PERSON 2`, QDC$`ACTOR-TEXT`, QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$Date)
+QDC_pers_resp_2 <- QDC_pers_resp_2[!is.na(QDC_pers_resp_2$QDC..Response.PERSON.2.),]
+QDC_pers_resp_2 <- unique(QDC_pers_resp_2)
+QDC_pers_resp_2$QDC..ACTOR.TEXT.=NULL; QDC_pers_resp_2$QDC..Does.it.respond.to.a.SECOND.catalyst..If.so..which..Response.TEXT.2.=NULL
+
+colnames(QDC_pers_resp) <- c("ACTOR-PERSON", "TIE-PERSON", "Date"); colnames(QDC_pers_resp_2) <- colnames(QDC_pers_resp)
+
+QDC_pers_resp <- rbind(QDC_pers_resp, QDC_pers_resp_2)
+
+QDC_pers_resp[,"Quality"] <- 9
+QDC_pers_resp[,"Line_type"] <- "dashed"
+
+QDC_pers <- rbind(QDC_pers, QDC_pers_resp)
+rm(QDC_pers_resp_2, QDC_pers_resp)
+
+
+##Note: Loops are allowed; if they aren't, just delete them from the DB - find out which ones they are here to them here: x <- QDC_pers[QDC_pers$`ACTOR-PERSON`==QDC_pers$`TIE-PERSON`,]
+##Note: There are also multiple ties. FOR NDTV DYNAMIC VIS (which can't take them into account anyways): Delete
+x <- QDC_pers[duplicated(QDC_pers[,c("ACTOR-PERSON", "TIE-PERSON")]),] # There are quite a few, and not only self-ties or ties from journals...
+QDC_pers <- QDC_pers[!duplicated(QDC_pers[,c("ACTOR-PERSON", "TIE-PERSON")]),] # This deletes them
+
+QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", loops=T, multiple=F, ignore.eval = F)
+
+### Creating node attr database - note, you need list of vertices to do this.
+
+QDC_pers_attr <- as.data.frame(QDC_pers_net %v% "vertex.names")
+colnames(QDC_pers_attr) <- "Pers_Name"
+## Import Actor type
+QDC_pers_attr$Pers_Name <- as.character(QDC_pers_attr$Pers_Name)
+QDC_pers_attr[,"Actor_type"] <- QDC_pers_nodes$Actor_type[match(unlist(QDC_pers_attr$Pers_Name), QDC_pers_nodes$Pers_Name)]
+## Create a vertex attribute for the number of sides of the vertex - if the actor is an authority or institution (i.e. actor type 2), then a pentagon, otherwise a circle
+QDC_pers_attr[,"Vertex_sides"] <- ifelse(QDC_pers_attr$Actor_type==2, 4, 50) # 50 means 50 sides, which for some reason ends up appearing as a circle
+## Create label - only for D'Alembert, La Chalotais, and Rousseau
+QDC_pers_attr[, "Label"] <- ifelse(QDC_pers_attr$Pers_Name=="D'Alembert"|QDC_pers_attr$Pers_Name=="La Chalotais"|QDC_pers_attr$Pers_Name=="Rousseau", QDC_pers_attr$Pers_Name, "")
+## Check that actors in the node df and network are in the same order
+all(QDC_pers_net %v% "vertex.names"==QDC_pers_attr$Pers_Name)
+
+## NOW finally create network object
+
+QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", vertex.attr = QDC_pers_attr, loops=TRUE, multiple=F, ignore.eval = F)
+
+## Colour according to actor type
+QDC_pers_net %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_pers_net %v% "Actor_type"]
+
+## Colour according to tie quality
+QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_pers_net %e% "Quality"]
+
+
+
+
+
+
+
+##### Visualisations #####
+
+
+
+
+#### __Static vis ####
+
+
+
+#### ____network package ####
+
+### QDC_text
+
+plot(QDC_text_net, vertex.col = "Type_col", edge.col = "Qual_col")
+plot(QDC_text_net, vertex.col = "Type_col", edge.col = "Qual_col", edge.lty= "Line_type")
+## With node size
+par(mar=c(0,0,0,0))
+
+## Fix layout - fruchterman-Reingold, not KK
+lay <- network.layout.fruchtermanreingold(QDC_text_net, layout.par = NULL)
+
+## degree (freeman) centrality
+plot(QDC_text_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_text_net)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## outdegree centrality
+plot(QDC_text_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_text_net, cmode = "outdegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## indegree centrality
+plot(QDC_text_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((sna::degree(QDC_text_net, cmode = "indegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+
+## With tiny labels
+## degree (freeman) centrality
+plot(QDC_text_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_text_net)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20, displaylabels=TRUE, label.cex=0.1, label.pos = 3)
+
+lay <- network.layout.kamadakawai(QDC_text_net, layout.par = NULL)
+
+
+### QDC_pers
+
+plot(QDC_pers_net, vertex.col = "Type_col", edge.col = "Qual_col", edge.lty= "Line_type")
+
+## With node size
+par(mar=c(0,0,0,0))
+
+## Fix layout - kamada-kawai
+lay <- network.layout.kamadakawai(QDC_pers_net, layout.par = NULL)
+
+## degree (freeman) centrality
+plot(QDC_pers_net, coord = lay,  vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## outdegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, cmode = "outdegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## indegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, cmode = "indegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+
+## Same - but counting loops in sizing of nodes
+## degree (freeman) centrality
+plot(QDC_pers_net, coord = lay,  vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, diag = TRUE)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## outdegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, diag = TRUE, cmode = "outdegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## indegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, diag = TRUE, cmode = "indegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+
+## With labels
+
+## degree (freeman) centrality
+plot(QDC_pers_net, coord = lay,  vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, diag = TRUE)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20, displaylabels=TRUE, label.cex=0.1, label.pos = 3)
+
+
+## Fix layout - Fruchterman-Reingold
+lay <- network.layout.fruchtermanreingold(QDC_pers_net, layout.par = NULL)
+
+## degree (freeman) centrality
+plot(QDC_pers_net, coord = lay,  vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net)+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## outdegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, cmode = "outdegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+## indegree centrality
+plot(QDC_pers_net, coord = lay, vertex.col = "Type_col", vertex.cex = (10*(log(((degree(QDC_pers_net, cmode = "indegree")+5)/100)+1))), vertex.lwd = 0.5, edge.col = "Qual_col", arrowhead.cex=0.5, edge.lwd=0.20)
+
+#### ____igraph ####
+
+## IF network object already computed
+
+par(mar=c(0,0,0,0))
+QDC_text_net_igraph <- asIgraph(QDC_text_net)
+
+plot(QDC_text_net_igraph, vertex.color = V(QDC_text_net_igraph)$Type_col, edge.color = E(QDC_text_net_igraph)$Qual_col, vertex.size=4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_igraph)$Line_type, vertex.label=V(QDC_text_net_igraph)$Label, vertex.label.cex=1, edge.arrow.size=0.3, vertex.label.dist=1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+#plot(QDC_text_net_igraph, vertex.color = V(QDC_text_net_igraph)$Type_col, edge.color = E(QDC_text_net_igraph)$Qual_col, vertex.size=4, vertex.label=NULL, vertex.label.dist=0.4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_igraph)$Line_type, vertex.label.cex=0.2, edge.arrow.size=0.3, vertex.label.degree=-pi/2, layout=layout_with_kk)
+
+QDC_text_net_62_64_igraph <- asIgraph(QDC_text_net_62_64)
+plot(QDC_text_net_62_64_igraph, vertex.color = V(QDC_text_net_62_64_igraph)$Type_col, edge.color = E(QDC_text_net_62_64_igraph)$Qual_col, vertex.size=4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_62_64_igraph)$Line_type, vertex.label=V(QDC_text_net_62_64_igraph)$Label, vertex.label.cex=1, edge.arrow.size=0.3, vertex.label.dist=1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+QDC_text_net_62_69_igraph <- asIgraph(QDC_text_net_62_69)
+plot(QDC_text_net_62_69_igraph, vertex.color = V(QDC_text_net_62_69_igraph)$Type_col, edge.color = E(QDC_text_net_62_69_igraph)$Qual_col, vertex.size=4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_62_69_igraph)$Line_type, vertex.label=V(QDC_text_net_62_69_igraph)$Label, vertex.label.cex=1, edge.arrow.size=0.3, vertex.label.dist=1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+QDC_text_net_70_79_igraph <- asIgraph(QDC_text_net_70_79)
+plot(QDC_text_net_70_79_igraph, vertex.color = V(QDC_text_net_70_79_igraph)$Type_col, edge.color = E(QDC_text_net_70_79_igraph)$Qual_col, vertex.size=4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_70_79_igraph)$Line_type, vertex.label=V(QDC_text_net_70_79_igraph)$Label, vertex.label.cex=1, edge.arrow.size=0.3, vertex.label.dist=1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+QDC_text_net_80_89_igraph <- asIgraph(QDC_text_net_80_89)
+plot(QDC_text_net_80_89_igraph, vertex.color = V(QDC_text_net_80_89_igraph)$Type_col, edge.color = E(QDC_text_net_80_89_igraph)$Qual_col, vertex.size=4, edge.curved=0, edge.width=2, edge.lty=E(QDC_text_net_80_89_igraph)$Line_type, vertex.label=V(QDC_text_net_80_89_igraph)$Label, vertex.label.cex=1, edge.arrow.size=0.3, vertex.label.dist=1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+
+# Note: previous colour for neutral ties: "#696969"
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1)) 
+E(QDC_text_net)$color <- ifelse(E(QDC_text_net)$Quality=="-1" | E(QDC_text_net)$Quality=="-2", "red", "gray15") 
+E(QDC_text_net)$color <- ifelse(E(QDC_text_net)$Quality==" 1" | E(QDC_text_net)$Quality==" 2", "chartreuse3", E(QDC_text_net)$color) 
+E(QDC_text_net)$color <- ifelse(E(QDC_text_net)$Quality==" 4", "orange", E(QDC_text_net)$color) 
+
+plot.igraph(QDC_text_net, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.2, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1))
+E(QDC_pers2_net)$color <- ifelse(E(QDC_pers2_net)$Quality=="-1" | E(QDC_pers2_net)$Quality=="-2", "red", "gray15") 
+E(QDC_pers2_net)$color <- ifelse(E(QDC_pers2_net)$Quality==" 1" | E(QDC_pers2_net)$Quality==" 2", "chartreuse3", E(QDC_pers2_net)$color) 
+E(QDC_pers2_net)$color <- ifelse(E(QDC_pers2_net)$Quality==" 4", "orange", E(QDC_pers2_net)$color) 
+
+plot.igraph(QDC_pers2_net, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.4, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1))
+E(QDC_pers_net)$color <- ifelse(E(QDC_pers_net)$Quality=="-1" | E(QDC_pers_net)$Quality=="-2", "red", "gray15") 
+E(QDC_pers_net)$color <- ifelse(E(QDC_pers_net)$Quality==" 1" | E(QDC_pers_net)$Quality==" 2", "chartreuse3", E(QDC_pers_net)$color) 
+E(QDC_pers_net)$color <- ifelse(E(QDC_pers_net)$Quality==" 4", "orange", E(QDC_pers_net)$color) 
+
+plot.igraph(QDC_pers_net, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.4, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1))
+E(QDC_pers3_net)$color <- ifelse(E(QDC_pers3_net)$Quality=="-1" | E(QDC_pers3_net)$Quality=="-2", "red", "gray15") 
+E(QDC_pers3_net)$color <- ifelse(E(QDC_pers3_net)$Quality==" 1" | E(QDC_pers3_net)$Quality==" 2", "chartreuse3", E(QDC_pers3_net)$color) 
+E(QDC_pers3_net)$color <- ifelse(E(QDC_pers3_net)$Quality==" 4", "orange", E(QDC_pers3_net)$color) 
+
+
+plot.igraph(QDC_pers3_net, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.4, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=layout_with_fr)
+
+### Separate graphs for years 1776-1785
+
+lay <- layout_with_fr(QDC_pers2_net_1785)
+lay_1784 <- lay[4:110,]
+
+
+E(QDC_pers2_net_1785)$color <- ifelse(E(QDC_pers2_net_1785)$Quality=="-1" | E(QDC_pers2_net_1785)$Quality=="-2", "red", ifelse(E(QDC_pers2_net_1785)$Quality==" 1" | E(QDC_pers2_net_1785)$Quality==" 2", "chartreuse3", "#696969"))
+plot.igraph(QDC_pers2_net_1785, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.4, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=lay)
+
+E(QDC_pers2_net_1784)$color <- ifelse(E(QDC_pers2_net_1784)$Quality=="-1" | E(QDC_pers2_net_1784)$Quality=="-2", "red", ifelse(E(QDC_pers2_net_1784)$Quality==" 1" | E(QDC_pers2_net_1784)$Quality==" 2", "chartreuse3", "#696969"))
+plot.igraph(QDC_pers2_net_1784, vertex.size=2, vertex.label.dist=0.4, edge.curved=0.3, vertex.label.cex=0.4, edge.arrow.size=0.1, vertex.label.degree=-pi/2, layout=lay_1784)
+
+
+#### __Movies ####
+
+
+
+#filmstrip(QDC_pers2_dyn, displaylabels=TRUE, mfrow=c(1, 1),
+#          slice.par=list(start=1753, end=1788, interval=6, 
+#                         aggregate.dur=6, rule='any'))
+
+
+
+
+
+
+
+
+
+##### ____Network Dynamic Object - Person-based network #####
+
+## Create vertex spell
+
+QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1760 & QDC_pers$Date<1790,]
+QDC_pers_all <- QDC_pers_62_89[,c(1,2,4)]
+x <- QDC_pers_all[,c(2,1,3)]
+colnames(x) <- colnames(QDC_pers_all)
+QDC_pers_all <- rbind(QDC_pers_all, x)
+QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
+QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
+QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
+QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
+QDC_vs <- QDC_vs[,1:2]
+colnames(QDC_vs) <- c("Actor_pers", "onset")
+QDC_vs[,"terminus"] <- 1790
+QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
+QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_pers)
+QDC_vs <- QDC_vs[,c(2,3,4,1)]
+QDC_vs$Actor_pers <- as.character(QDC_vs$Actor_pers)
+QDC_vs <- QDC_vs[order(QDC_vs$onset),]
+QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "")
+
+## Create edge spell
+## This is tricky: If I just copy and paste, without meaningful modification, the QDC_text procedure, then all ties of an actor in a given period will just enter at once, at the first time point. This makes no sense.
+## Instead, the solution is to construct the edge spell for QDC_text, and then match the actor/tie texts with the corresponding persons.
+## PROBLEM with using QDC_text as constructed previously: In rare cases, an actor text refers to persons WITHOUT refering to a text (e.g. Thi?bault - look him up). Those cases should not be included in the 'normal' actor-text database, but SHOULD be included in the actor person database
+## SOLUTION: Re-construct QDC_text while inputting tie-persons that dont have a tie-text value in the tie-text column
+## NOTE : You can't just artificially insert those special cases because the order of entries in the original QDC database is important.
+
+QDC_62_89_bis <- QDC_62_89
+QDC_62_89_bis$`TIE-TEXT`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] <- QDC_62_89_bis$`TIE-PERSON`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] 
+QDC_text_2 <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$`ACTOR-TEXT`),]
+QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$`TIE-TEXT`),]
+QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$Quality),]
+QDC_text_2[,"Line_type"] <- "solid"
+
+### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+QDC_text_2$Quality <- QDC_text_2$Quality + 3
+QDC_text_2$Quality[QDC_text_2$Quality>6] <- QDC_text_2$Quality[QDC_text_2$Quality>6]-1
+
+### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
+
+QDC_text_resp <- data.frame(QDC$`ACTOR-TEXT`, QDC$`Response-TEXT 1`, QDC$Date)
+QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$QDC..Response.TEXT.1.),]
+QDC_text_resp <- unique(QDC_text_resp)
+
+QDC_text_resp_2 <- data.frame(QDC$`ACTOR-TEXT`, QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$Date)
+QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$QDC..Does.it.respond.to.a.SECOND.catalyst..If.so..which..Response.TEXT.2.),]
+QDC_text_resp_2 <- unique(QDC_text_resp_2)
+
+colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date"); colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
+
+QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
+
+QDC_text_resp[,"Quality"] <- 9
+QDC_text_resp[,"Line_type"] <- "dashed"
+
+QDC_text_2 <- rbind(QDC_text_2, QDC_text_resp)
+rm(QDC_text_resp_2, QDC_text_resp)
+
+QDC_text_2[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_2$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text_2[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_2$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text_2[, "Tie_name"] <- paste0(QDC_text_2$Actor_Corpus_num, " &#8594 ", QDC_text_2$Tie_Corpus_num)
+
+QDC_text_62_89 <- QDC_text_2[QDC_text_2$Date>1760 & QDC_text_2$Date<1790,]
+
+QDC_es <- QDC_text_62_89
+QDC_es[,"terminus"] <- 1790
+QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name")]
+colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
+rm(QDC_text_62_89)
+
+### Split onset times in each year
+## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
+
+x <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
+x <- unique(x)
+x$onset <- as.numeric(as.character(x$onset))
+
+w <- table(x$onset)
+
+# Note: these latter two variables will be used for the edge
+
+for (i in (1762:1777)) {
+  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+}
+for (i in (1779:1786)) {
+  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+}
+for (i in (1788:1789)) {
+  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+}
+rm(w)
+
+
+## NOTE: If there are multiple ties between the same nodes (in the same direction), then they will currently all receive the earliest onset value with the code just below.
+QDC_es$onset <- x$onset[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
+
+### Fixing the slider of ndtv: including no decimal points.
+#Standard solution: round to one decimal point and Multiply all years by 10 
+
+x$onset <- round(x$onset, 1)*10
+
+QDC_es$onset <- x$onset[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
+QDC_es[,"terminus"] <- 17900
+QDC_vs[,"terminus"] <- 17900
+
+rm(x)
+
+
+## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
+## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. To do that, just rbind a file with actor-persons in both the actor-text and actor-person columns
+
+x <- as.data.frame(table(QDC$`ACTOR-TEXT`, QDC$`ACTOR-PERSON`))
+x <- x[x$Freq>0,1:2]
+xx <- data.frame(x$Var2, x$Var2)
+xx <- unique(xx)
+colnames(xx) <- c("Var1", "Var2")
+x <- rbind(x, xx)
+
+## CHECK: Does each actor-text correspond to exactly one actor-person?
+#which(duplicated(x$Var1))
+# ANS: Yes
+
+## CHECK: Are any actors in tie-text, response-text 1 and response-text 2 NOT in actor-text column?
+#QDC$`TIE-TEXT`[which(!(QDC$`TIE-TEXT` %in% QDC$`ACTOR-TEXT`))] ; QDC$`Response-TEXT 1`[which(!(QDC$`Response-TEXT 1` %in% QDC$`ACTOR-TEXT`))] ; QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`[which(!(QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2` %in% QDC$`ACTOR-TEXT`))] 
+## CHECK: Are any actors in tie-person, response-person 1 and response-person 2 NOT in actor-person column?
+#QDC$`TIE-PERSON`[which(!(QDC$`TIE-PERSON` %in% QDC$`ACTOR-PERSON`))] ; QDC$`Response-PERSON 1`[which(!(QDC$`Response-PERSON 1` %in% QDC$`ACTOR-PERSON`))] ; QDC$`Response-PERSON 2`[which(!(QDC$`Response-PERSON 2` %in% QDC$`ACTOR-PERSON`))] 
+# ANS: all Response/tie texts/persons are in the actor text/response columns
+## IF NOT, run the following:
+#xx <- as.data.frame(table(QDC$`Response-TEXT 1`, QDC$`Response-PERSON 1`))
+#xx <- xx[xx$Freq>0,]
+#w <- as.data.frame(table(xx$Var1)) # CHECK: each actor-text corresponds to exactly one actor-person
+#xxx <- as.data.frame(table(QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$`Response-PERSON 2`))
+#xxx <- xxx[xxx$Freq>0,]
+#w <- as.data.frame(table(xxx$Var1)) # CHECK: each actor-text corresponds to exactly one actor-person
+#xx <- rbind(x, xx, xxx)
+#rm(xx, xxx)
+
+colnames(x) <- c("ACTOR-TEXT", "ACTOR-PERSON")
+QDC_es$`TIE-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), x$`ACTOR-TEXT`)]
+QDC_es$`ACTOR-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
+QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
+QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name")]
+rm(x)
+## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
+## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
+
+x <- as.data.frame(table(QDC_es$Actor_code, QDC_es$onset))
+x <- x[x$Freq>0, 1:2]
+xx <- as.data.frame(table(QDC_es$Tie_code, QDC_es$onset))
+xx <- xx[xx$Freq>0, 1:2] #Note: This should be the same dimension as data.frame(QDC_es$Tie_code, QDC_es$onset), since each tie is given its unique onset  
+x <- rbind(x, xx)
+colnames(x) <- c("Actor_code", "onset")
+x$onset <- as.numeric(as.character(x$onset))
+x$Actor_code <- as.numeric(as.character(x$Actor_code))
+rm(xx)
+
+## order & remove duplicated in x
+
+w <- x[with(x, order(Actor_code, onset)),]
+w <- w[!(duplicated(w$Actor_code)),]
+
+## Using matching, replace Dates in QDC_vs
+
+QDC_vs$onset <- w$onset[match(unlist(QDC_vs$Actor_code), w$Actor_code)]
+
+rm(w, x)
+
+## The following is just to remove ambiguity with variable names
+
+colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
+
+
+
+### Create dynamic edge attribute for the texts that are involved in a tie
+
+QDC_es[,"Actor_tie"] <- paste0(QDC_es$`ACTOR-PERSON`, "  &#8594 ", QDC_es$`TIE-PERSON`)
+QDC_es[,"num"] <- 1:nrow(QDC_es)
+QDC_es <- QDC_es[order(QDC_es$Actor_tie, QDC_es$onset),]
+QDC_es[,"Tie_name_dyn"] <- QDC_es$Tie_name
+
+for (rownum in 2:nrow(QDC_es)) {
+  if (QDC_es$Actor_tie[rownum]==QDC_es$Actor_tie[rownum-1]) {
+    QDC_es$Tie_name_dyn[rownum] <- paste0(QDC_es$Tie_name_dyn[rownum-1], "; ", QDC_es$Tie_name[rownum])
+  }
+}
+
+## Note: I effectively can't use the Tie_name and Tie_name_dyn variables yet because the below code can only accommodate one edge per dyad. But it may be useful in future. 
+## Instead, for now I have to take the value of QDC_es$Tie_name_dyn that has all the edges
+
+x <- QDC_es[,c("ACTOR-PERSON", "TIE-PERSON", "Tie_name_dyn")]
+x <- x[order(x$Tie_name_dyn, decreasing = TRUE),]
+x <- x[!duplicated(x[,c("ACTOR-PERSON", "TIE-PERSON")]),]
+x[,"Actor_tie"] <- paste0(x$`ACTOR-PERSON`, "  &#8594 ", x$`TIE-PERSON`)
+QDC_es[,"Tie_name_fixed"] <- x$Tie_name_dyn[match(unlist(QDC_es$Actor_tie), x$Actor_tie)]
+
+QDC_es <- QDC_es[order(QDC_es$num),]
+QDC_es$num=NULL
+
+
+## Create network dynamic object
+
+## TEMP: LEt's make this a non-multigraph/multiplex graph - note: you will get warnings because multiple edges are found for given dyads
+#QDC_es <- QDC_es[!duplicated(QDC_es[,c("Actor_code", "Tie_code")]),]
+QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)
+
+QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
+
+## I think we need to set this vertex attribute as a persistent id.
+## "vertex.pid" is the persistent id of each vertex
+#set.network.attribute(QDC_pers_dyn, 'vertex.pid', 'vertex.names')
+## Note: this doesn't work later because I change "vertex.names"
+
+#set.vertex.attribute(QDC_pers_dyn, "vertex.names", ifelse(get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="D'Alembert (1753)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="La Chalotais (1763)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="Rousseau (1762)", get.vertex.attribute(QDC_pers_dyn, "vertex.names"), ""))
+
+## There seems to be an issue with the timing of some of the vertices. I've just discovered the reconcile.activity functions; I don't actually care about vertex actiity, I just want vertices to be active when the edges they are involved in are active.
+
+#reconcile.vertex.activity(QDC_pers_dyn, mode = "match.to.edges") #NOTE: this doesn't actually seem to do anything
+
+
+##### CORRIGER les accents etc.
+
+chars <- import("C:\\Users\\MarcS\\OneDrive - University of Edinburgh\\Gen\\Gemma\\HTML_codes_French_characters.xlsx")
+
+## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
+for (char in chars[,1]) {
+  QDC_pers_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "vertex.names") 
+}; rm(char)
+
+
+
+### Make animation
+#compute.animation(QDC_pers_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
+#compute.animation(QDC_pers_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+
+
+
+## Normal way of doing it
+
+start <- 17620
+end <- 17898
+
+QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_pers_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_pers_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+
+
+render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
+               plot.par = list(bg="white",
+                               #               render.par=list(tween.frames=100, show.time= FALSE),
+                               vertex.border="#ffffff",
+                               vertex.col = "Type_col",
+                               #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
+                               main="Querelle des coll?ges, 1762-1789",
+                               #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
+                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+                               #               vertex.cex = 0.8,
+                               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
+                               edge.lwd = 2,
+                               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_pers_dyn %v% 'vertex.names')
+#                               edge.tooltip = function(slice){slice %e% 'Tie_name'},
+                               edge.col = "Qual_col", usearrows=TRUE),
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+               #               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
+               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed.html",
+               #               launchBrowser=TRUE, filename="Final position.html",
+               verbose=TRUE)
+
+
+## Trying to make it less bunched
+
+
+start <- 17620
+end <- 17898
+
+QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_pers_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_pers_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_pers_anim2 <- QDC_pers_dyn
+
+for (i in seq(from = start,to = end+1, by=1)) {
+  activate.vertex.attribute(QDC_pers_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.x", at = i))/3.2)
+}
+
+for (i in seq(from = start,to = end+1, by=1)) {
+  activate.vertex.attribute(QDC_pers_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.y", at = i))/3.2)
+}
+
+
+render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
+               plot.par = list(bg="white",
+                               #               render.par=list(tween.frames=100, show.time= FALSE),
+                               vertex.border="#ffffff",
+                               vertex.col = "Type_col",
+                               #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
+                               main="Querelle des coll?ges, 1762-1789",
+                               #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
+                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+                               #               vertex.cex = 0.8,
+                               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
+                               edge.lwd = 2,
+                               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_pers_dyn %v% 'vertex.names')
+                               edge.tooltip = function(slice){slice %e% 'Tie_name_fix'},
+                               edge.col = "Qual_col", usearrows=TRUE),
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+#               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
+               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed_lessBunched_version3.html",
+#               launchBrowser=TRUE, filename="Final position.html",
+               verbose=TRUE)
+
+
+save(list = c("QDC_pers_anim2", "QDC_pers_anim_final"), file = "2022.11.10 - QDC_pers_degree_slider_fixed_lessBunched_version3.RData")
+
+
+
+
+
+
+
+
+
+#### Legacy visualisation codes
+
+
+
+start <- 1761.8
+end <- 1790
+inertia <- 8 # node position calculated by kamada kawai will be 1/inertia of the final node position. I.e. the greater the inertia, the less the position calculated by kamada kawai will contribute to the node's position and the more the node will stay close to its final position--i.e., the less the node will move
+
+## Normal version - without inertia
+## Let's make texts appear month by month (i.e. interval of 0.08333333)
+
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50, show.time=FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+               cex = 2,
+               #              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
+               #               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
+               vertex.cex = function(slice){(10*(log(((degree(slice)+5)/100)+1)))},
+               edge.lwd = 1.5,
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
+               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
+               output.mode = "HTML",
+               d3.options = list(animationDuration=600, enterExitAnimationFactor=0, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_pers_degree_normal.html",
+               verbose=TRUE)
+
+
+## Let's try to create algorith that makes the layout move much less
+
+## Version 1: make nodes stay closer to their final position
+
+
+
+compute.animation(QDC_pers_dyn, slice.par=list(start=(end-0.01), end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", layout.par = list(x = get.vertex.attribute.active(QDC_pers_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_pers_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+x <- get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at=end)
+y <- get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at=end)
+
+  
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+for (i in seq(from = start,to = end, by=0.08333333)) {
+  activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = i)+(x*(inertia-1)))/inertia, at = i)
+}
+
+for (i in seq(from = start,to = end, by=0.08333333)) {
+  activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = i)+(y*(inertia-1)))/inertia, at = i)
+}
+
+## Let's make texts appear month by month (i.e. interval of 0.08333333)
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x", y = "animation_y"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50, show.time=FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+               cex = 2,
+#              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
+#               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
+               vertex.cex = function(slice){(10*(log(((degree(slice)+5)/100)+1)))},
+               edge.lwd = 1.5,
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
+               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
+               output.mode = "HTML",
+               d3.options = list(animationDuration=600, enterExitAnimationFactor=0, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_pers_normal.html",
+               verbose=TRUE)
+  
+
+
+
+
+#### Version 2: make nodes closer to their next position in the sequence.
+
+## Doesn't do much in practice
+
+QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
+
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+
+activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = end), at = end)
+activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = end), at = end)
+
+for (i in seq(from = end,to = start, by=-0.08333333)) {
+  x <- get.vertex.attribute.active(QDC_pers_dyn, "animation.x", onset=(i), terminus=i)
+  activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = i-0.08333333)+(x*(inertia-1)))/inertia, at = i-0.08333333)
+}
+
+for (i in seq(from = end,to = start, by=-0.08333333)) {
+  y <- get.vertex.attribute.active(QDC_pers_dyn, "animation.y", onset=(i), terminus=i)
+  activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = i-0.08333333)+(y*(inertia-1)))/inertia, at = i-0.08333333)
+}
+
+## Let's make texts appear month by month (i.e. interval of 0.08333333)
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x", y = "animation_y"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50, show.time=FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+               cex = 2,
+#              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
+               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
+               edge.lwd = 1.5,
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
+               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
+               output.mode = "HTML",
+               d3.options = list(animationDuration=800, enterExitAnimationFactor=0, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_pers_vers2.html",
+               verbose=TRUE)
+
+
+
+#### Version 3: Now let's try the solution where we artificially make every node be there from the beginning and make them only appear when they get an edge
+
+
+QDC_vs_onset62 <- QDC_vs
+QDC_vs_onset62$onset <- 1762
+
+QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs_onset62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+set.vertex.attribute(QDC_pers_dyn, "vertex.label.size", ifelse(get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="D'Alembert (1753)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="La Chalotais (1763)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="Rousseau (1762)", 1, 0))
+vertex.label.size <- get.vertex.attribute(QDC_pers_dyn, "vertex.label.size")
+
+### Make animation
+#compute.animation(QDC_pers_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
+#compute.animation(QDC_pers_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+## Let's make perss appear month by month (i.e. interval of 0.08333333)
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1)) 
+
+compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), chain.direction = "reverse", default.dist = 5, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50, show.time=FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+               #vertex.sides = c(3,4,5),
+               #vertex.cex = 0.8,
+               #vertex.cex = function(slice){ (0.8*degree(slice)/(degree(slice) + 0.000001))}, #This one makes nodes grow as they appear
+               #               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice) + 0.000001)*(log(((degree(slice)+5)/100)+1)))}, #Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
+               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice))*(log(((degree(slice)+5)/100)+1)))}, #without the tiny number - Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
+               #vertex.cex = function(slice){ (0.25*degree(slice)/(degree(slice) + 0.000001)*(degree(slice)*exp(-0.015*degree(slice))))}, #geometric decay function (see https://mathworld.wolfram.com/ExponentialDecay.html) - kind of works for large nodes but the small nodes are just tiny
+               #vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice)}, #This one makes nodes appear instantly - also if you add a very small number at the end
+               #label.cex = vertex.label.size,
+               edge.lwd = 1.5,
+               vertex.tooltip = (QDC_pers_dyn %v% 'vertex.names'),
+               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
+               d3.options = list(animationDuration=600, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_pers_onset62_instant_node_appear.html",
+               verbose=TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### ____Network Dynamic Object - text-based network ####
+
+## Create network object
+
+
+## Create vertex spell
+
+QDC_text_62_89 <- QDC_text[QDC_text$Date>1760 & QDC_text$Date<1790,]
+QDC_text_all <- QDC_text_62_89[,c(1,2,4)]
+x <- QDC_text_all[,c(2,1,3)]
+colnames(x) <- colnames(QDC_text_all)
+QDC_text_all <- rbind(QDC_text_all, x)
+QDC_vs <- as.data.frame(table(QDC_text_all$`ACTOR-TEXT`, QDC_text_all$Date))
+QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
+QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
+QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
+QDC_vs <- QDC_vs[,1:2]
+colnames(QDC_vs) <- c("Actor_text", "onset")
+QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
+QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year + 1 - in most live uses, this should return 1790 
+QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_text)
+QDC_vs <- QDC_vs[,c(2,3,4,1)]
+QDC_vs$Actor_text <- as.character(QDC_vs$Actor_text)
+QDC_vs <- QDC_vs[order(QDC_vs$onset),]
+QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_text=="D'Alembert (1753)"| QDC_vs$Actor_text=="La Chalotais (1763)"| QDC_vs$Actor_text=="Rousseau (1762)", QDC_vs$Actor_text, "")
+QDC_vs[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_vs$Actor_text), QDC_text_nodes$Text_Name)]
+
+## Create edge spell
+
+QDC_es <- QDC_text_62_89
+QDC_es[,"terminus"] <- unique(QDC_vs$terminus)
+QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
+QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
+QDC_es[, "Actor_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
+QDC_es[, "Tie_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
+QDC_es[, "Tie_name"] <- paste0(QDC_es$Actor_Corpus_num, " &#8594 ", QDC_es$Tie_Corpus_num) # Note 07.08.2022: this attribute doesn't have a purpose yet, but it may do one day.
+
+QDC_es$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es$Quality]
+QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "Quality", "Tie_name", "Qual_col")]
+colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
+rm(QDC_text_62_89)
+
+### Split onset times in each year
+## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
+
+es_year_splits <- QDC_es[,c("Actor_code", "onset")] # NOTE: This is correct procedure IF database is in right order
+es_year_splits <- unique(es_year_splits)
+es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
+es_year_splits$Actor_code <- as.numeric(as.character(es_year_splits$Actor_code))
+
+w <- table(es_year_splits$onset)
+
+# Now split year: vertices will come in at equal intervals within the year, the last slice of the year is defined as: year + 1 - the interval within the year
+
+for (i in (1762:1789)) {
+  if (i %in% names(w)) {
+    year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+    es_year_splits$onset[es_year_splits$onset==i] <- year_slices
+    } else {
+      next
+    }
+}
+
+
+### Fixing the slider of ndtv: including no decimal points.
+
+## What if I just include only 1 decimal point? (2 decimal points doesn't work)
+
+#es_year_splits$onset <- round(es_year_splits$onset, 1)
+#QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$Actor_code), es_year_splits$Actor_code)]
+## Unfortunately doesn't work .
+
+#Standard solution: round to one decimal point and Multiply all years by 10 
+
+es_year_splits$onset <- round(es_year_splits$onset, 1)*10
+
+QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$Actor_code), es_year_splits$Actor_code)]
+
+# Or Set onset manually for testing
+#QDC_es$onset <- QDC_es$onset*10
+#QDC_vs$onset <- QDC_vs$onset*10
+
+
+QDC_es$terminus <- QDC_es$terminus*10
+QDC_vs$terminus <- QDC_vs$terminus*10
+
+
+rm(es_year_splits)
+
+rm(x)
+## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
+## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
+
+x <- as.data.frame(table(QDC_es$Actor_code, QDC_es$onset))
+x <- x[x$Freq>0, 1:2]
+xx <- as.data.frame(table(QDC_es$Tie_code, QDC_es$onset))
+xx <- xx[xx$Freq>0, 1:2] #Note: This should be the same dimension as data.frame(QDC_es$Tie_code, QDC_es$onset), since each tie is given its unique onset  
+x <- rbind(x, xx)
+colnames(x) <- c("Actor_code", "onset")
+x$onset <- as.numeric(as.character(x$onset))
+x$Actor_code <- as.numeric(as.character(x$Actor_code))
+rm(xx)
+
+## order & remove duplicated in x
+
+w <- x[with(x, order(Actor_code, onset)),]
+w <- w[!(duplicated(w$Actor_code)),]
+
+## Using matching, replace Dates in QDC_vs
+
+QDC_vs$onset <- w$onset[match(unlist(QDC_vs$Actor_code), w$Actor_code)]
+
+rm(w, x)
+
+
+
+
+## Create network dynamic object
+# Real version:
+QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+
+# Previous version, with base.net defined:
+#QDC_text_dyn <- networkDynamic(base.net = QDC_text_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
+# Test version, for debugging:
+#QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:3], edge.spells = QDC_es[,1:4])
+
+## Define vertex and edge attributes
+
+QDC_text_attr_dyn <- QDC_text_attr[order(QDC_text_attr$Text_Name),]
+
+for (col in colnames(QDC_text_attr_dyn)) {
+  QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
+}
+
+## Remove isolate nodes - disabled as of 11/02/2024
+
+#Isol <- import(paste0(Data_path, "OUTLIERS in QUERELLE.xlsx")) 
+#w <- which((QDC_text_dyn %v% "vertex.names") %in% Isol$Isolates)
+#(QDC_text_dyn %v% "vertex.names")[w] #CHECK: Works
+#network::delete.vertices(QDC_text_dyn, w)
+
+
+#### CORRIGER (!) les accents etc.
+chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
+
+## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
+for (char in chars[,1]) {
+  QDC_text_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "vertex.names") 
+  QDC_text_dyn %v% "Text_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
+}; rm(char)
+
+
+
+## There seems to be an issue with the timing of some of the vertices. I've just discovered the reconcile.activity functions; I don't actually care about vertex actiity, I just want vertices to be active when the edges they are involved in are active.
+
+#reconcile.vertex.activity(QDC_text_dyn, mode = "match.to.edges") #NOTE: "match.to.edges" should be the same as "encompass.edges" in the QDC, since edges all have a single activity, they appear at one point in the querelle and then stay active until the end.
+#reconcile.vertex.activity(QDC_text_dyn, mode = "match.to.edges", edge.active.default = FALSE) #What does changing this setting do? Not much it seems
+#reconcile.vertex.activity(QDC_text_dyn, mode = "encompass.edges")
+#reconcile.edge.activity(QDC_text_dyn, mode = "match.to.vertices", active.default = FALSE)
+
+
+
+
+
+
+### Make animation
+#compute.animation(QDC_text_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
+#compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+## Let's make texts appear month by month (i.e. interval of 0.08333333)
+compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1789.9, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+## Let's try MDSJ visualisation algorithm
+compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1789.9, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "MDSJ", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+## LEt's try KK with forward computing
+compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1763, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "forward", default.dist = 6, verbose = TRUE)
+render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+#               vertex.sides = "Vertex_sides",
+               xlab = function(s){paste(trunc(QDC_text_dyn$gal$slice.par$start+QDC_text_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+#               vertex.cex = function(slice){ (10*(log(((degree(slice)+5)/100)+1)))}, # trying without the tiny number or the degree/degree fraction
+               vertex.cex = function(slice){ (10*sna::degree(slice)/(sna::degree(slice) + 0.000001)*(log(((sna::degree(slice)+5)/100)+1)))},
+#               vertex.cex = 0.8,
+#               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
+               edge.lwd = 1.5,
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_text_dyn %v% 'vertex.names')
+               edge.col = "Qual_col", usearrows=TRUE,
+               #show.time = TRUE,
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_text_KK_fwd.html",
+               verbose=TRUE)
+
+
+
+
+## Now let's try the solution where we artifically make every node be there from the beginning and make them only appear when they get an edge
+
+
+QDC_vs_onset62 <- QDC_vs
+QDC_vs_onset62$onset <- 1762
+
+QDC_text_dyn <- networkDynamic(base.net = QDC_text_net, vertex.spells = QDC_vs_onset62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+# Highlight node labels for certain actors of interest (d'Alembert, La Chalotais, Rousseau)
+#set.vertex.attribute(QDC_text_dyn, "vertex.label.size", ifelse(get.vertex.attribute(QDC_text_dyn, "vertex.names")=="D'Alembert (1753)"| get.vertex.attribute(QDC_text_dyn, "vertex.names")=="La Chalotais (1763)"| get.vertex.attribute(QDC_text_dyn, "vertex.names")=="Rousseau (1762)", 1, 0))
+#vertex.label.size <- get.vertex.attribute(QDC_text_dyn, "vertex.label.size")
+
+Isol <- import("C:\\Users\\MarcS\\OneDrive - University of Edinburgh\\Gen\\Gemma\\OUTLIERS in QUERELLE.xlsx") 
+w <- which((QDC_text_dyn %v% "vertex.names") %in% Isol$Isolates)
+(QDC_text_dyn %v% "vertex.names")[w] #CHECK: Works
+network::delete.vertices(QDC_text_dyn, w)
+
+
+### Make animation
+#compute.animation(QDC_text_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
+#compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+## Let's make texts appear month by month (i.e. interval of 0.08333333)
+
+par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1)) 
+
+compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1764, interval=0.2, aggregate.dur=0.2, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 5, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
+               render.par=list(tween.frames=50, show.time=FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = function(s){paste(trunc(QDC_text_dyn$gal$slice.par$start+QDC_text_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
+               #vertex.sides = c(3,4,5),
+               #vertex.cex = 0.8,
+               #vertex.cex = function(slice){ (0.8*degree(slice)/(degree(slice) + 0.000001))}, #This one makes nodes grow as they appear
+#               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice) + 0.000001)*(log(((degree(slice)+5)/100)+1)))}, #Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
+               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice))*(log(((degree(slice)+5)/100)+1)))}, #without the tiny number - Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
+               #vertex.cex = function(slice){ (0.25*degree(slice)/(degree(slice) + 0.000001)*(degree(slice)*exp(-0.015*degree(slice))))}, #geometric decay function (see https://mathworld.wolfram.com/ExponentialDecay.html) - kind of works for large nodes but the small nodes are just tiny
+               #vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice)}, #This one makes nodes appear instantly - also if you add a very small number at the end
+               #label.cex = vertex.label.size,
+               edge.lwd = 1.5,
+               vertex.tooltip = (QDC_text_dyn %v% 'vertex.names'),
+               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
+               d3.options = list(animationDuration=600, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
+               launchBrowser=TRUE, filename="QDC_text_onset62_instant_node_appear_2.html",
+               verbose=TRUE)
+
+
+
+
+
+##### TESTING - I am testing here #####
+
+### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
+
+#compute.animation(QDC_text_dyn, slice.par=list(start=1762.000, end=1765.000, interval=0.1, aggregate.dur=0.1, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+#QDC_text_anim2 <- compute.animation(QDC_text_dyn, slice.par=list(start=17890, end=17899, interval=1, aggregate.dur=1, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
+#QDC_text_anim2 <- compute.animation(QDC_text_dyn, slice.par=list(start=17898, end=17899, interval=1, aggregate.dur=1, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_dyn %v% "animX" <- get.vertex.attribute.active(QDC_text_anim2, "animation.x", onset = 17898, terminus = 17899)
+#QDC_text_dyn %v% "animY" <- get.vertex.attribute.active(QDC_text_anim2, "animation.y", onset = 17898, terminus = 17899)
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animX", y = "animY"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(QDC_text_dyn %v% "animX", QDC_text_dyn %v% "animY"), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # This doesn't solve the issue of bunching
+start <- 17620
+end <- 17640
+
+# testing line
+QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+QDC_text_anim2 <- QDC_text_dyn
+
+for (i in seq(from = start,to = end, by=1)) {
+  activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/4)
+}
+
+for (i in seq(from = start,to = end, by=1)) {
+  activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/4)
+}
+
+#xx2 <- get.vertex.attribute.active(test2, "animation.x", onset = start, terminus = end, return.tea = TRUE)
+#xx <- get.vertex.attribute.active(test, "animation.x", onset = start, terminus = end, return.tea = TRUE)
+#activate.vertex.attribute(x = test2, prefix = "animX", value = xx, onset = 17620, terminus = 17650, dynamic.only = FALSE)
+#yy <- get.vertex.attribute.active(test, "animation.y", onset = 17620, terminus = 17650, return.tea = TRUE)
+#activate.vertex.attribute(x = test2, prefix = "animY", value = yy, onset = 17620, terminus = 17650, dynamic.only = TRUE)
+#test2 <- compute.animation(test2, slice.par=list(start=17620, end=17650, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x.active", y = "animation_y.active"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+
+
+render.d3movie(QDC_text_anim, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
+               plot.par = list(bg="white", mar=c(0,0,0,0),
+#               render.par=list(tween.frames=100, show.time= FALSE),
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+#               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
+               main="Querelle des collèges, 1762-1789",
+#              xlab = function(s){paste(trunc((QDC_text_dyn$gal$slice.par$start+1761)+(QDC_text_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
+               xlab = function(s){paste(trunc((QDC_text_anim$gal$slice.par$start+QDC_text_anim$gal$slice.par$interval*s)/10))},
+               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+               #               vertex.cex = 0.8,
+               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
+               edge.lwd = 2,
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_text_dyn %v% 'vertex.names')
+               edge.tooltip = function(slice){slice %e% 'Tie_name'},
+               edge.col = "Qual_col", usearrows=TRUE),
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+#               launchBrowser=TRUE, filename="QDC_text_indegree_slider_fixed_final_test_positions.html",
+               output.mode = 'HTML', launchBrowser=TRUE, filename="QDC_text_degree_slider_fixed_lessBunched_version3.html",
+#               launchBrowser=TRUE, filename="Final position.html",
+               verbose=TRUE)
+
+
+
+## Recreating the network with new process (as of 2024-02-17)
+
+render.d3movie(QDC_text_anim, 
+               vertex.tooltip = function(slice){slice %v% 'Text_Name'}, 
+               edge.col = "Qual_col",
+               vertex.col = "Type_col")
+
+### NOTE: if you want to switch the x and y co-ordinates of the nodes, you need to switch QDC_text_dyn %v% "animation.x.active" and QDC_text_dyn %v% "animation.y.active" vertex attributes (these attributes represent the node co-ordinates. They are re-calculated each time the compute.animation function is run.)
+
+save(list = c("QDC_text_anim2", "QDC_text_anim_final"), file = "QDC_text_degree_slider_fixed_lessBunched_version3.RData")
+
+## Note: the following doens't work - next solution is to try to set a dynamic vertex attribute using activate.vertex.attribute or something like that
+animationx <- (QDC_text_anim %v% "animation.x.active")
+animationx[animationx<100] <- animationx[animationx<100]*1.1
+set.vertex.attribute(x = QDC_text_anim, attrname = "animation.x.active", value = animationx)
+
+animationy <- (QDC_text_anim %v% "animation.y.active")
+animationy[animationy<100] <- animationy[animationy<100]*1.1
+set.vertex.attribute(x = QDC_text_anim, attrname = "animation.y.active", value = animationy)
+
+rm(QDC_text_anim)
+
+#(QDC_text_anim %v% "animation.y.active")[(QDC_text_anim %v% "animation.y.active")<100] <- (QDC_text_anim %v% "animation.y.active")[(QDC_text_anim %v% "animation.y.active")<100]*2
+
+xx <- get.vertex.attribute.active(QDC_text_anim2, "animation.x", onset = 17890, terminus = 17899, return.tea = TRUE)
+
+for (i in (1:length(xx))) {
+  for (j in 1:length(lengths(xx[[i]][[1]]))) {
+ xx[[i]][[1]][[j]] <- xx[[i]][[1]][[j]]*2   
+  }
+}
+
+activate.vertex.attribute(x = QDC_text_anim2, prefix = "animation.x2", value = xx, dynamic.only = TRUE)
+xxx <- get.vertex.attribute.active(QDC_text_anim2, "animation.x2", onset = 17890, terminus = 17899, return.tea = TRUE)
+
+## the result - xxx - produces an object that is not in the right format
+
+### Test movie animation (person net) - 1762 to 1764:
+
+test_vs <- QDC_vs[QDC_vs$onset<1766,]
+test_es <- QDC_es[QDC_es$onset<1766,]
+
+test_es$onset[27:78] <- seq(from=1763, to=1763.999, by = 0.0212766)
+test_es$onset[79:104] <- seq(from=1764, to=1764.999, by = 0.04347826)
+test_es$terminus <- 1766
+test_vs$terminus <- 1766
+test_vs$onset <- test_es$onset[match(unlist(test_vs$Actor_code), test_es$Actor_code)]
+test_vs[,"onset_2"] <- test_es$onset[match(unlist(test_vs$Actor_code), test_es$Tie_code)]
+test_vs$onset[which(is.na(test_vs$onset))] <- test_vs$onset_2[which(is.na(test_vs$onset))]
+test_vs$onset_2[which(is.na(test_vs$onset_2))] <- 9999
+test_vs$onset[test_vs$onset_2<test_vs$onset] <- test_vs$onset_2[test_vs$onset_2<test_vs$onset]
+test_vs$onset_2=NULL
+test_vs[,"New_code"] <- 1:86
+test_es$Actor_code <- test_vs$New_code[match(unlist(test_es$Actor_code), test_vs$Actor_code)]
+test_es$Tie_code <- test_vs$New_code[match(unlist(test_es$Tie_code), test_vs$Actor_code)]
+test_vs$Actor_code <- test_vs$New_code
+test_vs$New_code=NULL
+
+test_dyn <- networkDynamic(vertex.spells = test_vs[,1:3], edge.spells = test_es)
+
+compute.animation(test_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule='any'))
+render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white", main = "Querelle",
+               render.par=list(tween.frames=50),
+               vertex.border="#ffffff", vertex.col = "blue",
+               edge.col = '#55555599', usearrows=TRUE, edge.lwd=4,
+               show.time = TRUE,
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE),
+               launchBrowser=TRUE, verbose=TRUE, filename="QDC.html")
+
+
+
+
+##### Descriptive stats #####
+
+
+####__indegree & outdegree distributions (positive, negative & overall (inc. neutral)) ####
+
+
+####____Text####
+
+
+Overall_text_send <- data.frame(table(QDC_text[,1]))
+Overall_text_send <- Overall_text_send[with(Overall_text_send, order(-Overall_text_send$Freq)),]
+Overall_text_rec <- data.frame(table(QDC_text[,2]))
+Overall_text_rec <- Overall_text_rec[with(Overall_text_rec, order(-Overall_text_rec$Freq)),]
+
+QDC_text_pos <- QDC_text[QDC_text$Quality>0,]
+Pos_text_send <- data.frame(table(QDC_text_pos[,1]))
+Pos_text_send <- Pos_text_send[with(Pos_text_send, order(-Pos_text_send$Freq)),]
+Pos_text_rec <- data.frame(table(QDC_text_pos[,2]))
+Pos_text_rec <- Pos_text_rec[with(Pos_text_rec, order(-Pos_text_rec$Freq)),]
+
+
+QDC_text_neg <- QDC_text[QDC_text$Quality<0,]
+Neg_text_send <- data.frame(table(QDC_text_neg[,1]))
+Neg_text_send <- Neg_text_send[with(Neg_text_send, order(-Neg_text_send$Freq)),]
+Neg_text_rec <- data.frame(table(QDC_text_neg[,2]))
+Neg_text_rec <- Neg_text_rec[with(Neg_text_rec, order(-Neg_text_rec$Freq)),]
+
+write.xlsx(list("Overall_text_send" = Overall_text_send, "Overall_text_rec" = Overall_text_rec, "Pos_text_send" = Pos_text_send, "Pos_text_rec" = Pos_text_rec, "Neg_text_send" = Neg_text_send, "Neg_text_rec" = Neg_text_rec), "QDC_text_stats.xlsx")
+
+
+####____Person####
+
+
+Overall_pers_send <- data.frame(table(QDC_pers[,1]))
+Overall_pers_send <- Overall_pers_send[with(Overall_pers_send, order(-Overall_pers_send$Freq)),]
+Overall_pers_rec <- data.frame(table(QDC_pers[,2]))
+Overall_pers_rec <- Overall_pers_rec[with(Overall_pers_rec, order(-Overall_pers_rec$Freq)),]
+
+QDC_pers_pos <- QDC_pers[QDC_pers$Quality>0,]
+Pos_pers_send <- data.frame(table(QDC_pers_pos[,1]))
+Pos_pers_send <- Pos_pers_send[with(Pos_pers_send, order(-Pos_pers_send$Freq)),]
+Pos_pers_rec <- data.frame(table(QDC_pers_pos[,2]))
+Pos_pers_rec <- Pos_pers_rec[with(Pos_pers_rec, order(-Pos_pers_rec$Freq)),]
+
+
+QDC_pers_neg <- QDC_pers[QDC_pers$Quality<0,]
+Neg_pers_send <- data.frame(table(QDC_pers_neg[,1]))
+Neg_pers_send <- Neg_pers_send[with(Neg_pers_send, order(-Neg_pers_send$Freq)),]
+Neg_pers_rec <- data.frame(table(QDC_pers_neg[,2]))
+Neg_pers_rec <- Neg_pers_rec[with(Neg_pers_rec, order(-Neg_pers_rec$Freq)),]
+
+write.xlsx(list("Overall_pers_send" = Overall_pers_send, "Overall_pers_rec" = Overall_pers_rec, "Pos_pers_send" = Pos_pers_send, "Pos_pers_rec" = Pos_pers_rec, "Neg_pers_send" = Neg_pers_send, "Neg_pers_rec" = Neg_pers_rec), "QDC_pers_stats.xlsx")
