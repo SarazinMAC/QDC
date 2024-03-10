@@ -1235,7 +1235,7 @@ render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animX", y = "animY"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(QDC_text_dyn %v% "animX", QDC_text_dyn %v% "animY"), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # This doesn't solve the issue of bunching
 start <- 17620
-end <- 17640
+end <- 17899
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1264,7 +1264,6 @@ for (i in seq(from = start,to = end, by=1)) {
 
 render.d3movie(QDC_text_anim, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
                plot.par = list(bg="white", mar=c(0,0,0,0),
-#               render.par=list(tween.frames=100, show.time= FALSE),
                vertex.border="#ffffff",
                vertex.col = "Type_col",
 #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
@@ -1272,26 +1271,45 @@ render.d3movie(QDC_text_anim, render.par=list(tween.frames=50, show.time = TRUE)
 #              xlab = function(s){paste(trunc((QDC_text_dyn$gal$slice.par$start+1761)+(QDC_text_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
                xlab = function(s){paste(trunc((QDC_text_anim$gal$slice.par$start+QDC_text_anim$gal$slice.par$interval*s)/10))},
                vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-               #               vertex.cex = 0.8,
-               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
                edge.lwd = 2,
-               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_text_dyn %v% 'vertex.names')
+               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
                edge.col = "Qual_col", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-#               launchBrowser=TRUE, filename="QDC_text_indegree_slider_fixed_final_test_positions.html",
                output.mode = 'HTML', launchBrowser=TRUE, filename="QDC_text_degree_slider_fixed_lessBunched_version3.html",
-#               launchBrowser=TRUE, filename="Final position.html",
                verbose=TRUE)
 
 
 
 ## Recreating the network with new process (as of 2024-02-17)
 
-render.d3movie(QDC_text_anim, 
-               vertex.tooltip = function(slice){slice %v% 'Text_Name'}, 
+year_label <- function(s){
+  paste(trunc((QDC_text_anim$gal$slice.par$start+
+                 QDC_text_anim$gal$slice.par$interval*s)/10))
+  }
+
+node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/
+                                (sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((
+                                  sna::degree(slice, cmode = "freeman")+5)/100)+1)))
+  }
+
+
+
+render.d3movie(QDC_text_anim,
+               render.par=list(tween.frames=50, show.time = TRUE),
+               displaylabels = FALSE,
+               plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
+               vertex.tooltip = function(slice) {slice %v% 'Text_Name'},
+               edge.tooltip = function(slice){slice %e% 'Tie_name'},
                edge.col = "Qual_col",
-               vertex.col = "Type_col")
+               vertex.border="#ffffff",
+               vertex.col = "Type_col",
+               xlab = year_label,
+               vertex.cex = node_size,
+               usearrows=TRUE,
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+               output.mode = 'HTML', launchBrowser=TRUE, filename="QDC_text_degree_slider_fixed_lessBunched_version3.html",
+               verbose=TRUE)
 
 ### NOTE: if you want to switch the x and y co-ordinates of the nodes, you need to switch QDC_text_dyn %v% "animation.x.active" and QDC_text_dyn %v% "animation.y.active" vertex attributes (these attributes represent the node co-ordinates. They are re-calculated each time the compute.animation function is run.)
 
