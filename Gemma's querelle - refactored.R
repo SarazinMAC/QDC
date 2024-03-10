@@ -1029,8 +1029,17 @@ QDC_es[, "Actor_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`ACTOR-TEX
 QDC_es[, "Tie_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
 QDC_es[, "Tie_name"] <- paste0(QDC_es$Actor_Corpus_num, " &#8594 ", QDC_es$Tie_Corpus_num) # Note 07.08.2022: this attribute doesn't have a purpose yet, but it may do one day.
 
+## Create dynamic edge attribute 
+
+# Is edge sent to Rousseau?
+
+rousseau_codes <- QDC_vs$Actor_code[grepl("Rousseau", QDC_vs$Actor_text)] # note that I have given the object a plural name but am only expecting a single Rousseau code
+QDC_es$sent_to_rousseau <- (QDC_es$Tie_code %in% rousseau_codes)*1
+rm(rousseau_codes)
+
+# edge colour for dynamic vis
 QDC_es$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es$Quality]
-QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "Quality", "Tie_name", "Qual_col")]
+QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
 colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 rm(QDC_text_62_89)
 
@@ -1114,12 +1123,20 @@ QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_e
 
 ## Define vertex and edge attributes
 
+# vertex attributes
 QDC_text_attr_dyn <- QDC_text_attr[order(QDC_text_attr$Text_Name),]
 
 for (col in colnames(QDC_text_attr_dyn)) {
   QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
 }
 
+# edge attributes
+
+for (col in c("Tie_name", "sent_to_rousseau")) {
+  QDC_text_dyn %e% col <- QDC_es[[col]]
+}
+
+#QDC_text_dyn %e% "sent_to_rousseau" <- QDC_es$
 ## Remove isolate nodes - disabled as of 11/02/2024
 
 #Isol <- import(paste0(Data_path, "OUTLIERS in QUERELLE.xlsx")) 
@@ -1234,7 +1251,7 @@ render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
 #QDC_text_dyn %v% "animY" <- get.vertex.attribute.active(QDC_text_anim2, "animation.y", onset = 17898, terminus = 17899)
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animX", y = "animY"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(QDC_text_dyn %v% "animX", QDC_text_dyn %v% "animY"), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # This doesn't solve the issue of bunching
-start <- 17620
+start <- 17898
 end <- 17899
 
 # testing line
@@ -1293,7 +1310,7 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-
+filename <- "test_sent_to_Rousseau.html"
 
 render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
@@ -1301,14 +1318,15 @@ render.d3movie(QDC_text_anim,
                plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
                vertex.tooltip = function(slice) {slice %v% 'Text_Name'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
-               edge.col = "Qual_col",
+#               edge.col = "Qual_col",
+               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
                vertex.border="#ffffff",
                vertex.col = "Type_col",
                xlab = year_label,
                vertex.cex = node_size,
                usearrows=TRUE,
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               output.mode = 'HTML', launchBrowser=TRUE, filename="QDC_text_degree_slider_fixed_lessBunched_version3.html",
+               output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
 ### NOTE: if you want to switch the x and y co-ordinates of the nodes, you need to switch QDC_text_dyn %v% "animation.x.active" and QDC_text_dyn %v% "animation.y.active" vertex attributes (these attributes represent the node co-ordinates. They are re-calculated each time the compute.animation function is run.)
