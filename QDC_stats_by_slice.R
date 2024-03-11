@@ -22,7 +22,13 @@ QDC_vs_onset_62 <- QDC_vs
 QDC_vs_onset_62$onset <- 17620
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
-QDC_text_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = FALSE)
+QDC_text_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+
+# vertex attributes
+
+for (col in colnames(QDC_text_attr_dyn)) {
+  QDC_text_dyn_onset_62 %v% col <- QDC_text_attr_dyn[[col]]
+}
 
 # Create dynamic network object, but with tie direction inversed - to calculate directed closeness centrality
 
@@ -47,8 +53,7 @@ QDC_text_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 
 # Calculate statistics
 
-tErgmStats(QDC_text_dyn, formula = "~ edges + density + transitive + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
-
+net_stats <- tErgmStats(QDC_text_dyn, formula = "~ edges + density + transitive + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
 
 transitivity <- tSnaStats(QDC_text_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
 mutuality <- tSnaStats(QDC_text_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
@@ -66,6 +71,8 @@ undirected_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", s
 
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
 directed_closeness_inversed <- tSnaStats(QDC_text_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
+
+net_stats$prop_sent_to_rousseau <- indegree$R
 
 
 eigenvector <- tSnaStats(QDC_text_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
@@ -85,3 +92,5 @@ for (stat in stats_to_export) {
 date <- format(Sys.Date(), "%Y_%m_%d")
 
 write_xlsx(stats_list, path = paste0(export_path,"Actor_stats_by_slice_", date, ".xlsx"))
+
+write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, ".csv"))

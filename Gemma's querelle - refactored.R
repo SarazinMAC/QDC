@@ -1131,10 +1131,13 @@ for (col in colnames(QDC_text_attr_dyn)) {
 }
 
 # edge attributes
-
-for (col in c("Tie_name", "sent_to_rousseau")) {
-  QDC_text_dyn %e% col <- QDC_es[[col]]
-}
+# Note: this doesn't work as "Tie_name" is actually a dynamic edge attribute
+#for (col in c("Tie_name", "sent_to_rousseau")) {
+#  edge_name <- QDC_text_dyn %e% "Tie_name"
+#  edge_attribute <- QDC_es[[col]]
+#  ordered_edge_attribute <- edge_attribute[match(unlist(edge_name), QDC_es$Tie_name)]
+#  QDC_text_dyn %e% col <- ordered_edge_attribute
+#}
 
 #QDC_text_dyn %e% "sent_to_rousseau" <- QDC_es$
 ## Remove isolate nodes - disabled as of 11/02/2024
@@ -1318,8 +1321,8 @@ render.d3movie(QDC_text_anim,
                plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
                vertex.tooltip = function(slice) {slice %v% 'Text_Name'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
-#               edge.col = "Qual_col",
-               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
+               edge.col = "Qual_col",
+#               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
                vertex.border="#ffffff",
                vertex.col = "Type_col",
                xlab = year_label,
