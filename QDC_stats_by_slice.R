@@ -54,6 +54,7 @@ QDC_text_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 # Calculate statistics
 
 net_stats <- tErgmStats(QDC_text_dyn, formula = "~ edges + density + transitive + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
+net_stats <- as.data.frame(net_stats)
 
 transitivity <- tSnaStats(QDC_text_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
 mutuality <- tSnaStats(QDC_text_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
@@ -72,8 +73,19 @@ undirected_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", s
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
 directed_closeness_inversed <- tSnaStats(QDC_text_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
 
-net_stats$prop_sent_to_rousseau <- indegree$R
+Rousseau_indegree <- indegree[, grepl("Rousseau", colnames(indegree))]
+net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges 
 
+# Return first three largest receivers of ties
+
+indices_of_largest_receivers <- apply(indegree, 1, function(x) {which(x==max(x))})
+
+for (i in 1:length(indices_of_largest_receivers)) {
+  
+}
+paste(names(test[[2]]), collapse = "; ")
+
+test <- t(indegree)
 
 eigenvector <- tSnaStats(QDC_text_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
 
