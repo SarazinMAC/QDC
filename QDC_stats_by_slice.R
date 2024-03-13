@@ -78,12 +78,27 @@ net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges
 
 # Return first three largest receivers of ties
 
-indices_of_largest_receivers <- apply(indegree, 1, function(x) {which(x==max(x))})
-
-for (i in 1:length(indices_of_largest_receivers)) {
-  
+find_Nth_largest <- function(x, N) {
+  indices <- apply(indegree, 1, function(y) {
+    n <- length(unique(y))
+    which(y==sort(unique(y),partial=n-N+1)[n-N+1])
+  })
 }
-paste(names(test[[2]]), collapse = "; ")
+
+indices_of_largest_receivers <- apply(indegree, 1, function(x) {which(x==max(x))})
+indices_of_2nd_largest_receivers <- apply(indegree, 1, function(x) {
+  n <- length(unique(x))
+  which(x==sort(unique(x),partial=n-1)[n-1])
+  })
+
+largest_receivers <- list()
+for (i in 1:length(indices_of_largest_receivers)) {
+  largest_receivers[[i]] <- paste(names(test[[i]]), collapse = "; ")
+}
+
+largest_receivers <- unlist(largest_receivers)
+
+net_stats$largest_receivers <- largest_receivers
 
 test <- t(indegree)
 
