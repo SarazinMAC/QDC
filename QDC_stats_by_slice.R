@@ -79,28 +79,33 @@ net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges
 # Return first three largest receivers of ties
 
 find_Nth_largest <- function(x, N) {
-  indices <- apply(indegree, 1, function(y) {
-    n <- length(unique(y))
-    which(y==sort(unique(y),partial=n-N+1)[n-N+1])
+  # First find column indices of columns that have the Nth largest values in each row
+  indices_list <- apply(x, 1, function(y) {
+    # if there are fewer unique values (actors) than N, then just return NA
+    if (length(unique(y))<N) {
+      NA
+    } else {
+      n <- length(unique(y))
+      which(y==sort(unique(y),partial=n-N+1)[n-N+1]) 
+    }
   })
+  # Get column names (i.e. actor names) corresponding to these column indices
+  names_list <- list()
+  for (i in 1:length(indices_list)) {
+    names_list[[i]] <- paste(names(indices_list[[i]]), collapse = "; ")
+  }
+  
+  names <- unlist(names_list)
+  return(names)
 }
 
-indices_of_largest_receivers <- apply(indegree, 1, function(x) {which(x==max(x))})
-indices_of_2nd_largest_receivers <- apply(indegree, 1, function(x) {
-  n <- length(unique(x))
-  which(x==sort(unique(x),partial=n-1)[n-1])
-  })
+largest_receivers <- find_Nth_largest(x = indegree, N = 1)
+second_largest_receivers <- find_Nth_largest(x = indegree, N = 2)
+third_largest_receivers <- find_Nth_largest(x = indegree, N = 3)
 
-largest_receivers <- list()
-for (i in 1:length(indices_of_largest_receivers)) {
-  largest_receivers[[i]] <- paste(names(test[[i]]), collapse = "; ")
+for (col in c("largest_receivers", "second_largest_receivers", "third_largest_receivers")){
+  net_stats[[col]] <- get(col)
 }
-
-largest_receivers <- unlist(largest_receivers)
-
-net_stats$largest_receivers <- largest_receivers
-
-test <- t(indegree)
 
 eigenvector <- tSnaStats(QDC_text_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
 
