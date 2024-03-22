@@ -5,6 +5,8 @@
 library(tsna)
 library(writexl)
 
+options(scipen = 999)
+
 ## set configurable values
 
 export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
@@ -49,12 +51,24 @@ vertex_names <- vertex_names$Actor_text
 QDC_text_dyn_onset_62 %v% "vertex.names" <- vertex_names
 QDC_text_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 
+# Create dynamic net of negative and ambivalent ties
+
+QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
+
+QDC_text_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg, create.TEAs = TRUE)
+
+QDC_text_dyn_neg %v% "vertex.names" <- vertex_names
 
 
 # Calculate statistics
 
-net_stats <- tErgmStats(QDC_text_dyn, formula = "~ edges + density + transitive + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
+net_stats <- tErgmStats(QDC_text_dyn, formula = "~ edges + density + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
 net_stats <- as.data.frame(net_stats)
+
+net_stats_neg <- tErgmStats(QDC_text_dyn_neg, formula = "~ edges + density", start = start_slice, end = end_slice, time.interval = slice_interval) %>%
+  as.data.frame()
+
+colnames(net_stats_neg) <- paste0(colnames(net_stats_neg), "_negative")
 
 transitivity <- tSnaStats(QDC_text_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
 mutuality <- tSnaStats(QDC_text_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
@@ -67,16 +81,25 @@ components <- tSnaStats(QDC_text_dyn, snafun = "components", start = start_slice
 degree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
 indegree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+degree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
+indegree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
+outdegree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+
 #directed_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
 undirected_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = TRUE)
 
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
 directed_closeness_inversed <- tSnaStats(QDC_text_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
 
+# Calculate the proportions of ties (both overall and negative only) sent to Rousseau
+
 Rousseau_indegree <- indegree[, grepl("Rousseau", colnames(indegree))]
 net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges 
 
-# Return first three largest receivers of ties
+Rousseau_indegree_neg <- indegree_neg[, grepl("Rousseau", colnames(indegree_neg))]
+net_stats_neg$prop_sent_to_rousseau <- Rousseau_indegree_neg/net_stats$edges 
+
+# Return first three largest receivers of ties in overall network
 
 find_Nth_largest <- function(x, N) {
   # First find column indices of columns that have the Nth largest values in each row
@@ -103,15 +126,47 @@ largest_receivers <- find_Nth_largest(x = indegree, N = 1)
 second_largest_receivers <- find_Nth_largest(x = indegree, N = 2)
 third_largest_receivers <- find_Nth_largest(x = indegree, N = 3)
 
+largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 1)
+second_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 2)
+third_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
+fourth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
+fifth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
+
+largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 1)
+second_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 2)
+third_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
+fourth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
+fifth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
+
+
 for (col in c("largest_receivers", "second_largest_receivers", "third_largest_receivers")){
   net_stats[[col]] <- get(col)
 }
+
+for (col in c("largest_receivers_negative", 
+              "largest_senders_negative",
+              "second_largest_receivers_negative",
+              "second_largest_senders_negative",
+              "third_largest_receivers_negative",
+              "third_largest_senders_negative",
+              "fourth_largest_receivers_negative",
+              "fourth_largest_senders_negative",
+              "fifth_largest_receivers_negative",
+              "fifth_largest_senders_negative")) {
+  net_stats_neg[[col]] <- get(col)
+}
+
+
+
+#Combine stats from overall and negative only networks
+
+net_stats <- cbind(net_stats, net_stats_neg)
 
 eigenvector <- tSnaStats(QDC_text_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
 
 ## Create export of statistics
 
-stats_to_export <- c("degree", "indegree", "outdegree", "undirected_closeness", "directed_closeness_inversed")
+stats_to_export <- c("net_stats", "degree", "indegree", "outdegree", "undirected_closeness", "directed_closeness_inversed")
 # Set row names for exported statistics, calling them "slice"
 
 row_names <- seq(from = start_slice, to = end_slice, by = slice_interval)
@@ -123,6 +178,6 @@ for (stat in stats_to_export) {
 
 date <- format(Sys.Date(), "%Y_%m_%d")
 
-write_xlsx(stats_list, path = paste0(export_path,"Actor_stats_by_slice_", date, ".xlsx"))
+write_xlsx(stats_list, path = paste0(export_path,"Actor_stats_by_slice_", date, "_text_net.xlsx"))
 
-write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, ".csv"))
+write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_text_net.csv"))
