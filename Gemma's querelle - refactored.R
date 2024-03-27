@@ -572,39 +572,39 @@ rm(QDC_text_62_89)
 ### Split onset times in each year
 ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
 
-x <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
-x <- unique(x)
-x$onset <- as.numeric(as.character(x$onset))
+es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
+es_year_splits <- unique(es_year_splits)
+es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
 
 w <- table(x$onset)
 
 # Note: these latter two variables will be used for the edge
 
-for (i in (1762:1777)) {
-  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+for (i in (1762:1789)) {
+  if (i %in% names(w)) {
+    year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+    es_year_splits$onset[es_year_splits$onset==i] <- year_slices
+  } else {
+    next
+  }
 }
-for (i in (1779:1786)) {
-  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-}
-for (i in (1788:1789)) {
-  x$onset[x$onset==i] <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-}
-rm(w)
+
+
 
 
 ## NOTE: If there are multiple ties between the same nodes (in the same direction), then they will currently all receive the earliest onset value with the code just below.
-QDC_es$onset <- x$onset[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
+QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
 
 ### Fixing the slider of ndtv: including no decimal points.
 #Standard solution: round to one decimal point and Multiply all years by 10 
 
-x$onset <- round(x$onset, 1)*10
+es_year_splits$onset <- round(es_year_splits$onset, 1)*10
 
-QDC_es$onset <- x$onset[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
+QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
 QDC_es[,"terminus"] <- 17900
 QDC_vs[,"terminus"] <- 17900
 
-rm(x)
+rm(es_year_splits)
 
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
@@ -721,7 +721,7 @@ QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
 
 ##### CORRIGER les accents etc.
 
-chars <- import("C:\\Users\\MarcS\\OneDrive - University of Edinburgh\\Gen\\Gemma\\HTML_codes_French_characters.xlsx")
+chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
 
 ## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
 for (char in chars[,1]) {
@@ -773,7 +773,7 @@ render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE)
 ## Trying to make it less bunched
 
 
-start <- 17620
+start <- 17890
 end <- 17898
 
 QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -809,7 +809,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.col = "Qual_col", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
 #               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
-               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed_lessBunched_version3.html",
+#               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed_lessBunched_version3.html",
 #               launchBrowser=TRUE, filename="Final position.html",
                verbose=TRUE)
 

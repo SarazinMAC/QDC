@@ -11,25 +11,39 @@ options(scipen = 999)
 
 export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
+text_or_pers <- "pers"
 # Start and end slices (periods), and slice intervals, on which to calculate network/node statistics
 
 start_slice <- 17620
 end_slice <- 17899
 slice_interval <- 1
   
-# Create dynamic network object
+# Create dynamic network objects
+
+if (text_or_pers == "text") {
+  QDC_dyn <- QDC_text_dyn
+} else if (text_or_pers == "pers") {
+  QDC_dyn <- QDC_pers_dyn
+}
+
 ### tSnaStats doesn't seem to work with changing vertex activity - so recreate network with all nodes present in 17620
 
 QDC_vs_onset_62 <- QDC_vs
 QDC_vs_onset_62$onset <- 17620
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
-QDC_text_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
 
 # vertex attributes
 
-for (col in colnames(QDC_text_attr_dyn)) {
-  QDC_text_dyn_onset_62 %v% col <- QDC_text_attr_dyn[[col]]
+if (text_or_pers == "text") {
+  QDC_attr_dyn <- QDC_text_attr[order(QDC_text_attr$Text_Name),]
+} else if (text_or_pers == "pers") {
+  QDC_attr_dyn <- QDC_pers_attr[order(QDC_pers_attr$Pers_Name),]
+}
+
+for (col in colnames(QDC_attr_dyn)) {
+  QDC_dyn_onset_62 %v% col <- QDC_attr_dyn[[col]]
 }
 
 # Create dynamic network object, but with tie direction inversed - to calculate directed closeness centrality
@@ -39,57 +53,64 @@ QDC_es_inversed <- QDC_es_inversed[,c("onset", "terminus", "Tie_code", "Actor_co
 colnames(QDC_es_inversed) <- c("onset", "terminus", "Actor_code", "Tie_code")
 all(QDC_es_inversed$Actor_code==QDC_es$Tie_code); all(QDC_es_inversed$Tie_code==QDC_es$Actor_code)
 
-QDC_text_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
+QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
 
 
 ## Because base_net argument removed, set vertex names manually
 
-vertex_names <- QDC_vs[, c("Actor_code", "Actor_text")]
-vertex_names <- vertex_names[order(vertex_names$Actor_code),]
-vertex_names <- vertex_names$Actor_text
+if (text_or_pers == "text") {
+  vertex_names <- QDC_vs[, c("Actor_code", "Actor_text")]
+  vertex_names <- vertex_names[order(vertex_names$Actor_code),]
+  vertex_names <- vertex_names$Actor_text
+} else if (text_or_pers == "pers") {
+  vertex_names <- QDC_vs[, c("Actor_code", "Actor_pers")]
+  vertex_names <- vertex_names[order(vertex_names$Actor_code),]
+  vertex_names <- vertex_names$Actor_pers
+}
 
-QDC_text_dyn_onset_62 %v% "vertex.names" <- vertex_names
-QDC_text_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
+
+QDC_dyn_onset_62 %v% "vertex.names" <- vertex_names
+QDC_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 
 # Create dynamic net of negative and ambivalent ties
 
 QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
 
-QDC_text_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg, create.TEAs = TRUE)
+QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg, create.TEAs = TRUE)
 
-QDC_text_dyn_neg %v% "vertex.names" <- vertex_names
+QDC_dyn_neg %v% "vertex.names" <- vertex_names
 
 
 # Calculate statistics
 
-net_stats <- tErgmStats(QDC_text_dyn, formula = "~ edges + density + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
+net_stats <- tErgmStats(QDC_dyn, formula = "~ edges + density + ttriple", start = start_slice, end = end_slice, time.interval = slice_interval)
 net_stats <- as.data.frame(net_stats)
 
-net_stats_neg <- tErgmStats(QDC_text_dyn_neg, formula = "~ edges + density", start = start_slice, end = end_slice, time.interval = slice_interval) %>%
+net_stats_neg <- tErgmStats(QDC_dyn_neg, formula = "~ edges + density", start = start_slice, end = end_slice, time.interval = slice_interval) %>%
   as.data.frame()
 
 colnames(net_stats_neg) <- paste0(colnames(net_stats_neg), "_negative")
 
-transitivity <- tSnaStats(QDC_text_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
-mutuality <- tSnaStats(QDC_text_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
-centralization_degree <- tSnaStats(QDC_text_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "freeman")
-centralization_indegree <- tSnaStats(QDC_text_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "indegree")
-centralization_outdegree <- tSnaStats(QDC_text_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "outdegree")
+transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
+mutuality <- tSnaStats(QDC_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
+centralization_degree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "freeman")
+centralization_indegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "indegree")
+centralization_outdegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "outdegree")
 
-components <- tSnaStats(QDC_text_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
+components <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
 
-degree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
-indegree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
-outdegree <- tSnaStats(QDC_text_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
-degree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
-indegree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
-outdegree_neg <- tSnaStats(QDC_text_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
+indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
+outdegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
+indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
+outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
 
-#directed_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
-undirected_closeness <- tSnaStats(QDC_text_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = TRUE)
+#directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
+undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = TRUE)
 
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
-directed_closeness_inversed <- tSnaStats(QDC_text_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
+directed_closeness_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
 
 # Calculate the proportions of ties (both overall and negative only) sent to Rousseau
 
@@ -162,7 +183,7 @@ for (col in c("largest_receivers_negative",
 
 net_stats <- cbind(net_stats, net_stats_neg)
 
-eigenvector <- tSnaStats(QDC_text_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
+#eigenvector <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
 
 ## Create export of statistics
 
@@ -178,6 +199,6 @@ for (stat in stats_to_export) {
 
 date <- format(Sys.Date(), "%Y_%m_%d")
 
-write_xlsx(stats_list, path = paste0(export_path,"Actor_stats_by_slice_", date, "_text_net.xlsx"))
+write_xlsx(stats_list, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net.xlsx"))
 
-write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_text_net.csv"))
+write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_", text_or_pers,"_net.csv"))
