@@ -708,12 +708,12 @@ dummy_net <- network.initialize(number_of_nodes, multiple = TRUE)
 
 QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
 
-#Try to add on multiple edges
+#Create object to add on multiple edges
 
-multiple_edges <- QDC_es[,c("Actor_code", "Tie_code", "onset", "terminus")]
+multiple_edges <- QDC_es[,c("Actor_code", "Tie_code", "onset", "terminus", "Quality")]
 multiple_edges <- multiple_edges[duplicated(multiple_edges[c("Actor_code", "Tie_code")]),]
 
-add.edges.active(QDC_pers_dyn, tail = multiple_edges$Actor_code, head = multiple_edges$Tie_code, onset = multiple_edges$onset, terminus = multiple_edges$terminus)
+#add.edges.active(QDC_pers_dyn, tail = multiple_edges$Actor_code, head = multiple_edges$Tie_code, onset = multiple_edges$onset, terminus = multiple_edges$terminus)
 
 QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
 
