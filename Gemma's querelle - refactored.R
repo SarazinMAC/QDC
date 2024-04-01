@@ -565,7 +565,7 @@ QDC_text_62_89 <- QDC_text_2[QDC_text_2$Date>1760 & QDC_text_2$Date<1790,]
 
 QDC_es <- QDC_text_62_89
 QDC_es[,"terminus"] <- 1790
-QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name")]
+QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Line_type")]
 colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 rm(QDC_text_62_89)
 
@@ -576,7 +576,7 @@ es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct proc
 es_year_splits <- unique(es_year_splits)
 es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
 
-w <- table(x$onset)
+w <- table(es_year_splits$onset)
 
 # Note: these latter two variables will be used for the edge
 
@@ -641,7 +641,7 @@ QDC_es$`TIE-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), x$`ACTOR-
 QDC_es$`ACTOR-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
 QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
 QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name")]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Line_type")]
 rm(x)
 ## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
 ## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates

@@ -32,7 +32,7 @@ QDC_vs_onset_62 <- QDC_vs
 QDC_vs_onset_62$onset <- 17620
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
-QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
 
 # vertex attributes
 
@@ -45,15 +45,6 @@ if (text_or_pers == "text") {
 for (col in colnames(QDC_attr_dyn)) {
   QDC_dyn_onset_62 %v% col <- QDC_attr_dyn[[col]]
 }
-
-# Create dynamic network object, but with tie direction inversed - to calculate directed closeness centrality
-
-QDC_es_inversed <- QDC_es
-QDC_es_inversed <- QDC_es_inversed[,c("onset", "terminus", "Tie_code", "Actor_code")]
-colnames(QDC_es_inversed) <- c("onset", "terminus", "Actor_code", "Tie_code")
-all(QDC_es_inversed$Actor_code==QDC_es$Tie_code); all(QDC_es_inversed$Tie_code==QDC_es$Actor_code)
-
-QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
 
 
 ## Because base_net argument removed, set vertex names manually
@@ -68,16 +59,22 @@ if (text_or_pers == "text") {
   vertex_names <- vertex_names$Actor_pers
 }
 
-
 QDC_dyn_onset_62 %v% "vertex.names" <- vertex_names
+
+# Create dynamic network object, but with tie direction inversed - to calculate directed closeness centrality
+
+QDC_es_inversed <- QDC_es
+QDC_es_inversed <- QDC_es_inversed[,c("onset", "terminus", "Tie_code", "Actor_code")]
+colnames(QDC_es_inversed) <- c("onset", "terminus", "Actor_code", "Tie_code")
+all(QDC_es_inversed$Actor_code==QDC_es$Tie_code); all(QDC_es_inversed$Tie_code==QDC_es$Actor_code)
+
+QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
 QDC_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 
 # Create dynamic net of negative and ambivalent ties
 
 QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
-
-QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg, create.TEAs = TRUE)
-
+QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg[,1:4], create.TEAs = TRUE)
 QDC_dyn_neg %v% "vertex.names" <- vertex_names
 
 
@@ -91,13 +88,13 @@ net_stats_neg <- tErgmStats(QDC_dyn_neg, formula = "~ edges + density", start = 
 
 colnames(net_stats_neg) <- paste0(colnames(net_stats_neg), "_negative")
 
-transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
-mutuality <- tSnaStats(QDC_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
-centralization_degree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "freeman")
-centralization_indegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "indegree")
-centralization_outdegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "outdegree")
+#transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end = end_slice, time.interval = slice_interval)
+#mutuality <- tSnaStats(QDC_dyn, snafun = "mutuality", start = start_slice, end = end_slice, time.interval = slice_interval)
+#centralization_degree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "freeman")
+#centralization_indegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "indegree")
+#centralization_outdegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "outdegree")
 
-components <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
+#components <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
 
 degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
 indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
@@ -113,6 +110,16 @@ undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start 
 directed_closeness_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
 
 # Calculate the proportions of ties (both overall and negative only) sent to Rousseau
+## with test: is Rousseau in the column names of object (i.e. were vertex names set correctly?)
+
+check_if_node_is_present <- function(df, node_name) {
+  if (!(any(grepl(node_name, colnames(df))))) {
+    stop("Vertex names may not have been set correctly. Investigate!")
+  }
+}
+
+check_if_node_is_present(df = indegree, node_name = "Rousseau")
+check_if_node_is_present(df = indegree_neg, node_name = "Rousseau")
 
 Rousseau_indegree <- indegree[, grepl("Rousseau", colnames(indegree))]
 net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges 
@@ -150,14 +157,14 @@ third_largest_receivers <- find_Nth_largest(x = indegree, N = 3)
 largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 1)
 second_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 2)
 third_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
-fourth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
-fifth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 3)
+fourth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 4)
+fifth_largest_receivers_negative <- find_Nth_largest(x = indegree_neg, N = 5)
 
 largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 1)
 second_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 2)
 third_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
-fourth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
-fifth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 3)
+fourth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 4)
+fifth_largest_senders_negative <- find_Nth_largest(x = outdegree_neg, N = 5)
 
 
 for (col in c("largest_receivers", "second_largest_receivers", "third_largest_receivers")){
