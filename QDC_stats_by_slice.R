@@ -34,6 +34,10 @@ QDC_vs_onset_62$onset <- 17620
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
 QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
 
+# add multiple edges if needed
+
+add.edges.active(QDC_dyn_onset_62, tail = multiple_edges$Actor_code, head = multiple_edges$Tie_code, onset = multiple_edges$onset, terminus = multiple_edges$terminus)
+
 # vertex attributes
 
 if (text_or_pers == "text") {
@@ -208,4 +212,4 @@ date <- format(Sys.Date(), "%Y_%m_%d")
 
 write_xlsx(stats_list, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net.xlsx"))
 
-write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_", text_or_pers,"_net.csv"))
+#write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_", text_or_pers,"_net.csv"))

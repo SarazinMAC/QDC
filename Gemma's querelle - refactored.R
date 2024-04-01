@@ -700,10 +700,20 @@ QDC_es$num=NULL
 
 
 ## Create network dynamic object
+# Don't use base_net - it screws with creation of dynamic net
+#QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)µ
+number_of_nodes <- length(unique(QDC_vs$Actor_code))
 
-## TEMP: LEt's make this a non-multigraph/multiplex graph - note: you will get warnings because multiple edges are found for given dyads
-#QDC_es <- QDC_es[!duplicated(QDC_es[,c("Actor_code", "Tie_code")]),]
-QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)
+dummy_net <- network.initialize(number_of_nodes, multiple = TRUE)
+
+QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
+
+#Try to add on multiple edges
+
+multiple_edges <- QDC_es[,c("Actor_code", "Tie_code", "onset", "terminus")]
+multiple_edges <- multiple_edges[duplicated(multiple_edges[c("Actor_code", "Tie_code")]),]
+
+add.edges.active(QDC_pers_dyn, tail = multiple_edges$Actor_code, head = multiple_edges$Tie_code, onset = multiple_edges$onset, terminus = multiple_edges$terminus)
 
 QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
 
