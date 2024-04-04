@@ -78,7 +78,9 @@ QDC_vs_onset_62$onset <- 17620
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
 QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
-QDC_dyn_onset_62 <- add_multiple_edges_active(netdyn = QDC_dyn_onset_62)
+if (text_or_pers == "pers") {
+  QDC_dyn_onset_62 <- add_multiple_edges_active(netdyn = QDC_dyn_onset_62)
+}
 
 # vertex attributes
 
@@ -116,9 +118,12 @@ all(QDC_es_inversed$Actor_code==QDC_es$Tie_code); all(QDC_es_inversed$Tie_code==
 
 QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
 QDC_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
+
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
-QDC_dyn_onset_62_inversed <- add_multiple_edges_active(
-  netdyn = QDC_dyn_onset_62_inversed, edge_spells = QDC_es_inversed)
+if (text_or_pers == "pers") {
+  QDC_dyn_onset_62_inversed <- add_multiple_edges_active(
+    netdyn = QDC_dyn_onset_62_inversed, edge_spells = QDC_es_inversed)
+}
 
 # Create undirected version of network
 
@@ -133,8 +138,11 @@ QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
 QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg[,1:4], create.TEAs = TRUE)
 QDC_dyn_neg %v% "vertex.names" <- vertex_names
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
-QDC_dyn_neg <- add_multiple_edges_active(
-  netdyn = QDC_dyn_neg, edge_spells = QDC_es_neg)
+if (text_or_pers == "pers") {
+  QDC_dyn_neg <- add_multiple_edges_active(
+    netdyn = QDC_dyn_neg, edge_spells = QDC_es_neg)
+}
+
 
 
 # Calculate statistics
