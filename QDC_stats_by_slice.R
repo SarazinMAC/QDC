@@ -17,13 +17,13 @@ options(scipen = 999)
 
 export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
-text_or_pers <- "text"
+text_or_pers <- "pers"
 
 # Start and end slices (periods), and slice intervals, on which to calculate network/node statistics
 
 
-start_slice <- 17620
-end_slice <- 17899
+start_slice <- 1762
+end_slice <- 1789
 slice_interval <- 1
 
 # Custom functions
@@ -60,13 +60,29 @@ find_Nth_largest <- function(x, N) {
   return(names)
 }
 
-# Create dynamic network objects
+# Divide onsets and termini by 10
+#TODO: Fix this bodge to make it more sustainable
 
-if (text_or_pers == "text") {
-  QDC_dyn <- QDC_text_dyn
-} else if (text_or_pers == "pers") {
-  QDC_dyn <- QDC_pers_dyn
+if (any(QDC_vs$onset > 10000)) {
+  QDC_vs$onset <- trunc(QDC_vs$onset/10); QDC_vs$terminus <- trunc(QDC_vs$terminus/10)
+  QDC_es$onset <- trunc(QDC_es$onset/10); QDC_es$terminus <- trunc(QDC_es$terminus/10)
 }
+
+#QDC_vs <- QDC_vs[!duplicated(QDC_vs[,c("Actor_code")]),]
+#QDC_es <- QDC_es[!duplicated(QDC_es[,c("Actor_code", "Tie_code")]),]
+
+# recreate QDC_dyn object
+
+QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+
+# Create dynamic network objects
+## Note: not needed with line above
+
+#if (text_or_pers == "text") {
+#  QDC_dyn <- QDC_text_dyn
+#} else if (text_or_pers == "pers") {
+#  QDC_dyn <- QDC_pers_dyn
+#}
 
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
 #QDC_dyn <- add_multiple_edges_active(netdyn = QDC_dyn)
@@ -74,7 +90,7 @@ if (text_or_pers == "text") {
 ### tSnaStats doesn't seem to work with changing vertex activity - so recreate network with all nodes present in 17620
 
 QDC_vs_onset_62 <- QDC_vs
-QDC_vs_onset_62$onset <- 17620
+QDC_vs_onset_62$onset <- start_slice
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
 QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
@@ -137,6 +153,7 @@ QDC_dyn_onset_62_undirected %v% "vertex.names" <- vertex_names
 QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
 QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg[,1:4], create.TEAs = TRUE)
 QDC_dyn_neg %v% "vertex.names" <- vertex_names
+
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
 if (text_or_pers == "pers") {
   QDC_dyn_neg <- add_multiple_edges_active(
@@ -173,7 +190,7 @@ degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end
 indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
 
-evcent <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
+eigenvector <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
 
 #directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
 undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = TRUE)
@@ -202,8 +219,8 @@ net_stats_neg$prop_sent_to_rousseau <- Rousseau_indegree_neg/net_stats$edges
 
 # Try to calculate local transitivity/clustering coefficient
 
-extracts <- network.extract(QDC_dyn, at = 17620, rule = "any", active.default = FALSE)
-extracts <- intergraph::asIgraph(extracts)
+#extracts <- network.extract(QDC_dyn, at = 17620, rule = "any", active.default = FALSE)
+#extracts <- intergraph::asIgraph(extracts)
 
 # Largest receivers/senders of ties
 
@@ -251,7 +268,7 @@ net_stats <- cbind(net_stats, net_stats_neg)
 
 ## Create export of statistics
 
-stats_to_export <- c("net_stats", "degree", "indegree", "outdegree", "undirected_closeness", "directed_closeness_inversed", "evcent")
+stats_to_export <- c("net_stats", "degree", "indegree", "outdegree", "undirected_closeness", "directed_closeness_inversed", "eigenvector")
 # Set row names for exported statistics, calling them "slice"
 
 row_names <- seq(from = start_slice, to = end_slice, by = slice_interval)
@@ -264,5 +281,23 @@ for (stat in stats_to_export) {
 date <- format(Sys.Date(), "%Y_%m_%d")
 
 write_xlsx(stats_list, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net.xlsx"))
+
+# Try transposing everything to make it more readable
+
+stats_list_transposed <- list()
+
+for (stat in stats_to_export) {
+  stat_df <- cbind("slice" = row_names, as.data.frame(get(stat)))
+  new_rownames <- colnames(stat_df)
+  stats_transposed <- t(stat_df)
+  colnames(stats_transposed) <- row_names
+  rownames(stats_transposed) <- new_rownames
+  stats_transposed <- stats_transposed[-1,]
+  stats_transposed <- cbind(rownames(stats_transposed), as.data.frame(stats_transposed))
+  colnames(stats_transposed)[1] <- paste0("Actor_", text_or_pers, "_name")
+  stats_list_transposed[[stat]] <- stats_transposed
+}
+
+write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net_transposed.xlsx"))
 
 #write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_", text_or_pers,"_net.csv"))
