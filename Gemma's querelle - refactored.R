@@ -27,7 +27,7 @@ QDC_file <- import(paste0(Data_path, Data_name))
 # Clean dataset of empty rows
 
 empty_rows <- apply(QDC_file, 1, function(x) {all(is.na(x))}) # records TRUE if the row is full of NAs
-QDC <- QDC_file[!empty_rows,] # Only keep rows that return false to the line above
+QDC <- QDC_file[!empty_rows,] # Only keep rows that return FALSE to the line above
 
 
 
@@ -497,13 +497,21 @@ plot.igraph(QDC_pers2_net_1784, vertex.size=2, vertex.label.dist=0.4, edge.curve
 
 ##### ____Network Dynamic Object - Person-based network #####
 
-## Create vertex spell
+# Create vertex spell
+# First main QDC actors
 
-QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1760 & QDC_pers$Date<1790,]
-QDC_pers_all <- QDC_pers_62_89[,c(1,2,4)]
-x <- QDC_pers_all[,c(2,1,3)]
-colnames(x) <- colnames(QDC_pers_all)
-QDC_pers_all <- rbind(QDC_pers_all, x)
+QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
+QDC_pers_62_89 <- QDC_pers_62_89[,c("ACTOR-PERSON","TIE-PERSON","Date")]
+QDC_pers_62_89_inversed <- QDC_pers_62_89[,c("TIE-PERSON","ACTOR-PERSON","Date")]
+colnames(QDC_pers_62_89) <- colnames(QDC_pers_all)
+
+# Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
+
+QDC_pre_62 <- QDC[QDC$Date<1762,]
+QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-PERSON", "TIE-PERSON", "Date"))
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-PERSON`),]
+
+QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_all, QDC_pers_62_89_inversed)
 QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
 QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
 QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
@@ -516,7 +524,7 @@ QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_pers)
 QDC_vs <- QDC_vs[,c(2,3,4,1)]
 QDC_vs$Actor_pers <- as.character(QDC_vs$Actor_pers)
 QDC_vs <- QDC_vs[order(QDC_vs$onset),]
-QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "")
+#QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "") # This is no longer needed
 
 ## Create edge spell
 ## This is tricky: If I just copy and paste, without meaningful modification, the QDC_text procedure, then all ties of an actor in a given period will just enter at once, at the first time point. This makes no sense.
@@ -525,17 +533,19 @@ QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_
 ## SOLUTION: Re-construct QDC_text while inputting tie-persons that dont have a tie-text value in the tie-text column
 ## NOTE : You can't just artificially insert those special cases because the order of entries in the original QDC database is important.
 
+# First, main QDC texts
+
 QDC_62_89_bis <- QDC_62_89
 QDC_62_89_bis$`TIE-TEXT`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] <- QDC_62_89_bis$`TIE-PERSON`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] 
-QDC_text_2 <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
-QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$`ACTOR-TEXT`),]
-QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$`TIE-TEXT`),]
-QDC_text_2 <- QDC_text_2[!is.na(QDC_text_2$Quality),]
-QDC_text_2[,"Line_type"] <- "solid"
+QDC_text_for_pers_net <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`ACTOR-TEXT`),]
+QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`TIE-TEXT`),]
+QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$Quality),]
+#QDC_text_for_pers_net[,"Line_type"] <- "solid" #Not needed for dynamic vis
 
 ### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
-QDC_text_2$Quality <- QDC_text_2$Quality + 3
-QDC_text_2$Quality[QDC_text_2$Quality>6] <- QDC_text_2$Quality[QDC_text_2$Quality>6]-1
+QDC_text_for_pers_net$Quality <- QDC_text_for_pers_net$Quality + 3
+QDC_text_for_pers_net$Quality[QDC_text_for_pers_net$Quality>6] <- QDC_text_for_pers_net$Quality[QDC_text_for_pers_net$Quality>6]-1
 
 ### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
 
@@ -547,27 +557,48 @@ QDC_text_resp_2 <- data.frame(QDC$`ACTOR-TEXT`, QDC$`Does it respond to a SECOND
 QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$QDC..Does.it.respond.to.a.SECOND.catalyst..If.so..which..Response.TEXT.2.),]
 QDC_text_resp_2 <- unique(QDC_text_resp_2)
 
-colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date"); colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
+colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date")
+colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
 
 QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
 
 QDC_text_resp[,"Quality"] <- 9
-QDC_text_resp[,"Line_type"] <- "dashed"
+#QDC_text_resp[,"Line_type"] <- "dashed" #Not needed for dynamic vis
 
-QDC_text_2 <- rbind(QDC_text_2, QDC_text_resp)
+# Second, pre-QdC texts, with edge dates remaining pre-62
+# NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
+# Similarly, in network stats, their edge onsets should be set to that value
+# TODO: turn this into a custom function
+
+QDC_pre_62 <- QDC[QDC$Date<1762,]
+QDC_pre_62$`TIE-TEXT`[is.na(QDC_pre_62$`TIE-TEXT`) & !(is.na(QDC_pre_62$`TIE-PERSON`))] <- QDC_pre_62$`TIE-PERSON`[is.na(QDC_pre_62$`TIE-TEXT`) & !(is.na(QDC_pre_62$`TIE-PERSON`))] 
+QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`TIE-TEXT`),]
+
+# negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+QDC_pre_62$Quality <- QDC_pre_62$Quality + 3
+QDC_pre_62$Quality[QDC_pre_62$Quality>6] <- QDC_pre_62$Quality[QDC_pre_62$Quality>6]-1
+
+# Now, merge the various datasets and create dynamic edge attributes
+# NOTE: still have to figure out how to make dynamic edge attributes change based on edge toggles
+
+QDC_text_for_pers_net <- rbind(QDC_pre_62, QDC_text_for_pers_net, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
 
-QDC_text_2[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_2$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text_2[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_2$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text_2[, "Tie_name"] <- paste0(QDC_text_2$Actor_Corpus_num, " &#8594 ", QDC_text_2$Tie_Corpus_num)
+QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
+QDC_text_for_pers_net[, "Tie_name"] <- paste0(QDC_text_for_pers_net$Actor_Corpus_num, " &#8594 ", QDC_text_for_pers_net$Tie_Corpus_num)
 
-QDC_text_62_89 <- QDC_text_2[QDC_text_2$Date>1760 & QDC_text_2$Date<1790,]
 
-QDC_es <- QDC_text_62_89
+
+QDC_es <- QDC_text_for_pers_net
 QDC_es[,"terminus"] <- 1790
-QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Line_type")]
+QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality")]
 colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
-rm(QDC_text_62_89)
+QDC_es$onset_year <- QDC_es$onset
+rm(QDC_text_for_pers_net)
 
 ### Split onset times in each year
 ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
@@ -592,15 +623,15 @@ for (i in (1762:1789)) {
 
 
 
-## NOTE: If there are multiple ties between the same nodes (in the same direction), then they will currently all receive the earliest onset value with the code just below.
-QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
 
 ### Fixing the slider of ndtv: including no decimal points.
 #Standard solution: round to one decimal point and Multiply all years by 10 
 
-es_year_splits$onset <- round(es_year_splits$onset, 1)*10
+es_year_splits$onset <- trunc(es_year_splits$onset*10)
 
+## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
 QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
+
 QDC_es[,"terminus"] <- 17900
 QDC_vs[,"terminus"] <- 17900
 
@@ -641,7 +672,7 @@ QDC_es$`TIE-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), x$`ACTOR-
 QDC_es$`ACTOR-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
 QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
 QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Line_type")]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality")]
 rm(x)
 ## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
 ## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
@@ -708,21 +739,10 @@ number_of_nodes <- length(unique(QDC_vs$Actor_code))
 #dummy_net <- network.initialize(number_of_nodes, multiple = TRUE)
 
 #QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
-QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
+QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
 
 QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
-
-## I think we need to set this vertex attribute as a persistent id.
-## "vertex.pid" is the persistent id of each vertex
-#set.network.attribute(QDC_pers_dyn, 'vertex.pid', 'vertex.names')
-## Note: this doesn't work later because I change "vertex.names"
-
-#set.vertex.attribute(QDC_pers_dyn, "vertex.names", ifelse(get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="D'Alembert (1753)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="La Chalotais (1763)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="Rousseau (1762)", get.vertex.attribute(QDC_pers_dyn, "vertex.names"), ""))
-
-## There seems to be an issue with the timing of some of the vertices. I've just discovered the reconcile.activity functions; I don't actually care about vertex actiity, I just want vertices to be active when the edges they are involved in are active.
-
-#reconcile.vertex.activity(QDC_pers_dyn, mode = "match.to.edges") #NOTE: this doesn't actually seem to do anything
-
+#TODO: Fix the presence of NAs in this attribute
 
 ##### CORRIGER les accents etc.
 
