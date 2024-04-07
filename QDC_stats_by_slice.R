@@ -10,8 +10,13 @@ library(tsna)
 library(writexl)
 library(tergm)
 library(intergraph)
+library(dplyr)
 
 options(scipen = 999)
+
+## Create reference dfs
+
+original_QDC_es <- QDC_es
 
 ## set configurable values
 
@@ -22,8 +27,8 @@ text_or_pers <- "pers"
 # Start and end slices (periods), and slice intervals, on which to calculate network/node statistics
 
 
-start_slice <- 1762
-end_slice <- 1789
+start_slice <- 17620
+end_slice <- 17899
 slice_interval <- 1
 
 # Custom functions
@@ -60,13 +65,46 @@ find_Nth_largest <- function(x, N) {
   return(names)
 }
 
+# Assign edge spell values of Pre-QdC actors to first onset at which the actors receive a tie
+
+# Actually two functions, one nested in another, because some pre-QDC actors refer to each other
+
+update_edge_spells <- function(spells, spells_to_update, spells_for_updating) {
+  onsets <- data.frame(c(spells_for_updating$Actor_code, spells_for_updating$Tie_code), c(spells_for_updating$onset, spells_for_updating$onset))
+  colnames(onsets) <- c("Actor_code", "onsets")
+  onsets_for_spells_to_update <- onsets[onsets$Actor_code %in% spells_to_update$Actor_code,]
+  onsets_for_spells_to_update <- onsets_for_spells_to_update[order(onsets_for_spells_to_update$Actor_code, onsets_for_spells_to_update$onsets),]
+  onsets_for_spells_to_update <- onsets_for_spells_to_update[!duplicated(onsets_for_spells_to_update$Actor_code),]
+  spells <- dplyr::left_join(spells, onsets_for_spells_to_update, by = "Actor_code")
+  spells$onset[spells$spells_to_update==1] <- spells$onsets[spells$spells_to_update==1]
+  spells$onsets=NULL
+  return(spells)
+}
+  
+
+assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es) {
+  #TODO: Insert while loop at the end to keep running the process until edge spells have stopped updating
+  edge_spells$spells_to_update <- (edge_spells$onset<17620)*1
+  pre_qdc_spells <- edge_spells[edge_spells$spells_to_update==1,]
+  qdc_spells <- edge_spells[edge_spells$spells_to_update==0,]
+  edge_spells <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = qdc_spells)
+  edge_spells2 <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells)
+  edge_spells3 <- update_edge_spells(spells = edge_spells2, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells2)
+  edge_spells4 <- update_edge_spells(spells = edge_spells3, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells3)
+  return(edge_spells4)
+}
+
+
+# assign correct onsets to pre_QDC edges
+QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
+
 # Divide onsets and termini by 10
 #TODO: Fix this bodge to make it more sustainable
 
-if (any(QDC_vs$onset > 10000)) {
-  QDC_vs$onset <- trunc(QDC_vs$onset/10); QDC_vs$terminus <- trunc(QDC_vs$terminus/10)
-  QDC_es$onset <- trunc(QDC_es$onset/10); QDC_es$terminus <- trunc(QDC_es$terminus/10)
-}
+#if (any(QDC_vs$onset > 10000)) {
+#  QDC_vs$onset <- trunc(QDC_vs$onset/10); QDC_vs$terminus <- trunc(QDC_vs$terminus/10)
+#  QDC_es$onset <- trunc(QDC_es$onset/10); QDC_es$terminus <- trunc(QDC_es$terminus/10)
+#}
 
 #QDC_vs <- QDC_vs[!duplicated(QDC_vs[,c("Actor_code")]),]
 #QDC_es <- QDC_es[!duplicated(QDC_es[,c("Actor_code", "Tie_code")]),]
@@ -181,7 +219,8 @@ transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end =
 #centralization_indegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "indegree")
 #centralization_outdegree <- tSnaStats(QDC_dyn, snafun = "centralization", start = start_slice, end = end_slice, time.interval = slice_interval, FUN = "degree", cmode = "outdegree")
 
-#components <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
+components_weak <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
+components_unilateral <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "unilateral")
 
 degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
 indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
@@ -190,13 +229,15 @@ degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end
 indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
 
-eigenvector <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
+eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
+eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e6)
+
 
 #directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
-undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = TRUE)
+undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = FALSE)
 
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
-directed_closeness_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = TRUE)
+directed_closeness_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir", rescale = FALSE)
 
 # Calculate the proportions of ties (both overall and negative only) sent to Rousseau
 ## with test: is Rousseau in the column names of object (i.e. were vertex names set correctly?)
@@ -211,10 +252,10 @@ check_if_node_is_present(df = indegree, node_name = "Rousseau")
 check_if_node_is_present(df = indegree_neg, node_name = "Rousseau")
 
 Rousseau_indegree <- indegree[, grepl("Rousseau", colnames(indegree))]
-net_stats$prop_sent_to_rousseau <- Rousseau_indegree/net_stats$edges 
+net_stats$prop_ties_sent_to_rousseau <- Rousseau_indegree/net_stats$edges 
 
 Rousseau_indegree_neg <- indegree_neg[, grepl("Rousseau", colnames(indegree_neg))]
-net_stats_neg$prop_sent_to_rousseau <- Rousseau_indegree_neg/net_stats$edges 
+net_stats_neg$prop_neg_ties_sent_to_rousseau <- Rousseau_indegree_neg/net_stats$edges 
 
 
 # Try to calculate local transitivity/clustering coefficient
@@ -264,11 +305,9 @@ for (col in c("largest_receivers_negative",
 
 net_stats <- cbind(net_stats, net_stats_neg)
 
-#eigenvector <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, gmode = "graph")
-
 ## Create export of statistics
 
-stats_to_export <- c("net_stats", "degree", "indegree", "outdegree", "undirected_closeness", "directed_closeness_inversed", "eigenvector")
+stats_to_export <- c("net_stats", "degree", "indegree", "outdegree", "degree_neg", "indegree_neg", "outdegree_neg", "undirected_closeness", "directed_closeness_inversed", "eigenvector_undirected", "eigenvector_inversed")
 # Set row names for exported statistics, calling them "slice"
 
 row_names <- seq(from = start_slice, to = end_slice, by = slice_interval)
@@ -299,5 +338,3 @@ for (stat in stats_to_export) {
 }
 
 write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net_transposed.xlsx"))
-
-#write.csv(net_stats, paste0(export_path, "network_stats_by_slice_", date, "_", text_or_pers,"_net.csv"))
