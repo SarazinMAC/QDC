@@ -24,6 +24,9 @@ export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
 text_or_pers <- "pers"
 
+# TODO: Make the below work with both the text and person network (note last column "Actor_pers")
+#QDC_vs_colnames_to_keep <- c("onset", "terminus", "Actor_code", "Actor_pers")
+
 # Start and end slices (periods), and slice intervals, on which to calculate network/node statistics
 
 
@@ -91,6 +94,7 @@ assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es) {
   edge_spells2 <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells)
   edge_spells3 <- update_edge_spells(spells = edge_spells2, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells2)
   edge_spells4 <- update_edge_spells(spells = edge_spells3, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells3)
+  edge_spells4$spells_to_update=NULL
   return(edge_spells4)
 }
 
@@ -111,7 +115,7 @@ QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
 
 # recreate QDC_dyn object
 
-QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
+QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
 
 # Create dynamic network objects
 ## Note: not needed with line above
@@ -131,7 +135,7 @@ QDC_vs_onset_62 <- QDC_vs
 QDC_vs_onset_62$onset <- start_slice
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
-QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
+QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
 if (text_or_pers == "pers") {
   QDC_dyn_onset_62 <- add_multiple_edges_active(netdyn = QDC_dyn_onset_62)
 }
@@ -170,7 +174,7 @@ QDC_es_inversed <- QDC_es_inversed[,c("onset", "terminus", "Tie_code", "Actor_co
 colnames(QDC_es_inversed) <- c("onset", "terminus", "Actor_code", "Tie_code")
 all(QDC_es_inversed$Actor_code==QDC_es$Tie_code); all(QDC_es_inversed$Tie_code==QDC_es$Actor_code)
 
-QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
+QDC_dyn_onset_62_inversed <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:4], edge.spells = QDC_es_inversed[,1:4], create.TEAs = FALSE)
 QDC_dyn_onset_62_inversed %v% "vertex.names" <- vertex_names
 
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
@@ -183,13 +187,13 @@ if (text_or_pers == "pers") {
 
 QDC_es_undirected <- rbind(QDC_es[,1:4], QDC_es_inversed)
 
-QDC_dyn_onset_62_undirected <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_undirected[,1:4], create.TEAs = TRUE)
+QDC_dyn_onset_62_undirected <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:4], edge.spells = QDC_es_undirected[,1:4], create.TEAs = TRUE)
 QDC_dyn_onset_62_undirected %v% "vertex.names" <- vertex_names
 
 # Create dynamic net of negative and ambivalent ties
 
 QDC_es_neg <- QDC_es[QDC_es$Quality %in% c(1, 2, 6),]
-QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:5], edge.spells = QDC_es_neg[,1:4], create.TEAs = TRUE)
+QDC_dyn_neg <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:4], edge.spells = QDC_es_neg[,1:4], create.TEAs = TRUE)
 QDC_dyn_neg %v% "vertex.names" <- vertex_names
 
 # Add multiple edges - note, should only be relevant with person network; might even return an error with text net
