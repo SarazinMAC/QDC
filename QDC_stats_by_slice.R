@@ -206,6 +206,7 @@ if (text_or_pers == "pers") {
 
 # Calculate statistics
 
+# Note: This function doesn't take into account multiple ties or loops
 net_stats <- tErgmStats(QDC_dyn, formula = "~ edges + density + ttriple + mutual", start = start_slice, end = end_slice, time.interval = slice_interval)
 net_stats <- as.data.frame(net_stats)
 

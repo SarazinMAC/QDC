@@ -1,15 +1,9 @@
-#library(data.table)
 library(intergraph)
-
 library(rio)
-#library(openxlsx)
-#library(igraph)
 library(sna)
-#library(threejs)
 library(statnet.common)
 library(network)
 library(ndtv)
-#library(visNetwork)
 library(networkDynamic)
 
 #detach("package:ndtv", unload=TRUE)
@@ -18,10 +12,16 @@ library(networkDynamic)
 #library(networkDynamic)
 
 # Configurable values
+
 Data_name <- "QDC_2024_01_31.xlsx"
 Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
+
+
+# import dataset
+
 QDC_file <- import(paste0(Data_path, Data_name))
+
 
 
 # Clean dataset of empty rows
