@@ -16,7 +16,9 @@ library(networkDynamic)
 Data_name <- "QDC_2024_01_31.xlsx"
 Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
+# Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
 
+slice_or_year <- "slice"
 
 # import dataset
 
@@ -503,7 +505,7 @@ plot.igraph(QDC_pers2_net_1784, vertex.size=2, vertex.label.dist=0.4, edge.curve
 QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
 QDC_pers_62_89 <- QDC_pers_62_89[,c("ACTOR-PERSON","TIE-PERSON","Date")]
 QDC_pers_62_89_inversed <- QDC_pers_62_89[,c("TIE-PERSON","ACTOR-PERSON","Date")]
-colnames(QDC_pers_62_89) <- colnames(QDC_pers_all)
+colnames(QDC_pers_62_89_inversed) <- colnames(QDC_pers_62_89)
 
 # Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
 
@@ -511,7 +513,7 @@ QDC_pre_62 <- QDC[QDC$Date<1762,]
 QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-PERSON", "TIE-PERSON", "Date"))
 QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-PERSON`),]
 
-QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_all, QDC_pers_62_89_inversed)
+QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_62_89, QDC_pers_62_89_inversed)
 QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
 QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
 QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
@@ -600,42 +602,46 @@ colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 QDC_es$onset_year <- QDC_es$onset
 rm(QDC_text_for_pers_net)
 
-### Split onset times in each year
-## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
+# Compute within-year slices; if slices and not years are used
 
-es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
-es_year_splits <- unique(es_year_splits)
-es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
-
-w <- table(es_year_splits$onset)
-
-# Note: these latter two variables will be used for the edge
-
-for (i in (1762:1789)) {
-  if (i %in% names(w)) {
-    year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-    es_year_splits$onset[es_year_splits$onset==i] <- year_slices
-  } else {
-    next
+if (slice_or_year == "slice") {
+  ### Split onset times in each year
+  ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
+  
+  es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
+  es_year_splits <- unique(es_year_splits)
+  es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
+  
+  w <- table(es_year_splits$onset)
+  
+  # Note: these latter two variables will be used for the edge
+  
+  for (i in (1762:1789)) {
+    if (i %in% names(w)) {
+      year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+      es_year_splits$onset[es_year_splits$onset==i] <- year_slices
+    } else {
+      next
+    }
   }
+  
+  
+  
+  
+  
+  ### Fixing the slider of ndtv: including no decimal points.
+  #Standard solution: round to one decimal point and Multiply all years by 10 
+  
+  es_year_splits$onset <- trunc(es_year_splits$onset*10)
+  
+  ## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
+  QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
+  
+  QDC_es[,"terminus"] <- 17900
+  QDC_vs[,"terminus"] <- 17900
+  
+  rm(es_year_splits)
 }
-
-
-
-
-
-### Fixing the slider of ndtv: including no decimal points.
-#Standard solution: round to one decimal point and Multiply all years by 10 
-
-es_year_splits$onset <- trunc(es_year_splits$onset*10)
-
-## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
-QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
-
-QDC_es[,"terminus"] <- 17900
-QDC_vs[,"terminus"] <- 17900
-
-rm(es_year_splits)
 
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
@@ -733,7 +739,7 @@ QDC_es$num=NULL
 ## Create network dynamic object
 # Don't use base_net - it screws with creation of dynamic net
 #QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)µ
-number_of_nodes <- length(unique(QDC_vs$Actor_code))
+#number_of_nodes <- length(unique(QDC_vs$Actor_code))
 
 # Try creating dummy net to instruct the network that it should have multiple edges
 #dummy_net <- network.initialize(number_of_nodes, multiple = TRUE)
@@ -1019,16 +1025,21 @@ render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
 
 #### ____Network Dynamic Object - text-based network ####
 
-## Create network object
+# Create vertex spell
+## First, QDC actors
 
+QDC_text_62_89 <- QDC_text[QDC_text$Date>1761 & QDC_text$Date<1790,]
+QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date")]
+QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date")]
+colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_all)
 
-## Create vertex spell
+# Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
 
-QDC_text_62_89 <- QDC_text[QDC_text$Date>1760 & QDC_text$Date<1790,]
-QDC_text_all <- QDC_text_62_89[,c(1,2,4)]
-x <- QDC_text_all[,c(2,1,3)]
-colnames(x) <- colnames(QDC_text_all)
-QDC_text_all <- rbind(QDC_text_all, x)
+QDC_pre_62 <- QDC[QDC$Date<1762,]
+QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date"))
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
+
+QDC_text_all <- rbind(QDC_pre_62, QDC_text_62_89, QDC_text_62_89_inversed)
 QDC_vs <- as.data.frame(table(QDC_text_all$`ACTOR-TEXT`, QDC_text_all$Date))
 QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
 QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
@@ -1046,7 +1057,29 @@ QDC_vs[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_vs$Actor_tex
 
 ## Create edge spell
 
-QDC_es <- QDC_text_62_89
+# First, main QdC texts
+
+QDC_text_62_89 <- QDC_text[QDC_text$Date>1761 & QDC_text$Date<1790, c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date")]
+
+# Second, pre-QdC texts, with edge dates remaining pre-62
+# NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
+# Similarly, in network stats, their edge onsets should be set to that value
+
+QDC_pre_62 <- QDC[QDC$Date<1762,]
+QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
+QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`TIE-TEXT`),]
+
+# negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+QDC_pre_62$Quality <- QDC_pre_62$Quality + 3
+QDC_pre_62$Quality[QDC_pre_62$Quality>6] <- QDC_pre_62$Quality[QDC_pre_62$Quality>6]-1
+
+# now, merge both
+
+QDC_es <- rbind(QDC_pre_62, QDC_text_62_89)
+
+# Create DVs
 QDC_es[,"terminus"] <- unique(QDC_vs$terminus)
 QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
 QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
@@ -1064,11 +1097,14 @@ rm(rousseau_codes)
 
 # edge colour for dynamic vis
 QDC_es$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es$Quality]
-QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
+QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "ACTOR-TEXT", "TIE-TEXT", "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
 colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 rm(QDC_text_62_89)
 
-### Split onset times in each year
+### Split onset times in each year, if using slices and not years
+
+if (slice_or_year == "slice") {
+  
 ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
 
 es_year_splits <- QDC_es[,c("Actor_code", "onset")] # NOTE: This is correct procedure IF database is in right order
@@ -1109,7 +1145,8 @@ QDC_vs$terminus <- QDC_vs$terminus*10
 
 rm(es_year_splits)
 
-rm(x)
+}
+
 ## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
 ## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
 
