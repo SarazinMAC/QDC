@@ -22,7 +22,7 @@ original_QDC_es <- QDC_es
 
 export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
-text_or_pers <- "pers"
+text_or_pers <- "text"
 
 # TODO: Make the below work with both the text and person network (note last column "Actor_pers")
 #QDC_vs_colnames_to_keep <- c("onset", "terminus", "Actor_code", "Actor_pers")
@@ -49,7 +49,7 @@ add_multiple_edges_active <- function(netdyn, edge_spells = QDC_es, tail_col = "
 
 find_Nth_largest <- function(x, N) {
   # First find column indices of columns that have the Nth largest values in each row
-  indices_list <- apply(x, 1, function(y) {
+  indices_list <- apply(x, 1, simplify = FALSE, function(y) {
     # if there are fewer unique values (actors) than N, then just return NA
     if (length(unique(y))<N) {
       NA
@@ -85,9 +85,9 @@ update_edge_spells <- function(spells, spells_to_update, spells_for_updating) {
 }
   
 
-assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es) {
+assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es, .start_slice = start_slice) {
   #TODO: Insert while loop at the end to keep running the process until edge spells have stopped updating
-  edge_spells$spells_to_update <- (edge_spells$onset<17620)*1
+  edge_spells$spells_to_update <- (edge_spells$onset<.start_slice)*1
   pre_qdc_spells <- edge_spells[edge_spells$spells_to_update==1,]
   qdc_spells <- edge_spells[edge_spells$spells_to_update==0,]
   edge_spells <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = qdc_spells)
@@ -206,7 +206,7 @@ if (text_or_pers == "pers") {
 
 # Calculate statistics
 
-# Note: This function doesn't take into account multiple ties or loops
+# Note: tErgmStats function doesn't take into account multiple ties or loops
 net_stats <- tErgmStats(QDC_dyn, formula = "~ edges + density + ttriple + mutual", start = start_slice, end = end_slice, time.interval = slice_interval)
 net_stats <- as.data.frame(net_stats)
 
@@ -319,19 +319,23 @@ row_names <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 stats_list <- list()
 for (stat in stats_to_export) {
-  stats_list[[stat]] <- cbind("slice" = row_names, as.data.frame(get(stat)))
+  stats_list[[stat]] <- cbind(row_names, as.data.frame(get(stat)))
+  colnames(stats_list[[stat]])[1] <- slice_or_year
 }
 
 date <- format(Sys.Date(), "%Y_%m_%d")
 
-write_xlsx(stats_list, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net.xlsx"))
+#write_xlsx(stats_list, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.xlsx"))
 
 # Try transposing everything to make it more readable
 
 stats_list_transposed <- list()
+stats_list_transposed[["net_stats"]] <- stats_list[["net_stats"]]
 
-for (stat in stats_to_export) {
-  stat_df <- cbind("slice" = row_names, as.data.frame(get(stat)))
+for (stat in stats_to_export[stats_to_export!="net_stats"]) {
+  stat_df <- cbind(row_names, as.data.frame(get(stat)))
+  colnames(stat_df)[1] <- slice_or_year
+  
   new_rownames <- colnames(stat_df)
   stats_transposed <- t(stat_df)
   colnames(stats_transposed) <- row_names
@@ -342,4 +346,4 @@ for (stat in stats_to_export) {
   stats_list_transposed[[stat]] <- stats_transposed
 }
 
-write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_slice_", date, "_", text_or_pers,"_net_transposed.xlsx"))
+write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
