@@ -1330,18 +1330,6 @@ for (char in chars[,1]) {
 
 
 
-## There seems to be an issue with the timing of some of the vertices. I've just discovered the reconcile.activity functions; I don't actually care about vertex actiity, I just want vertices to be active when the edges they are involved in are active.
-
-#reconcile.vertex.activity(QDC_text_dyn, mode = "match.to.edges") #NOTE: "match.to.edges" should be the same as "encompass.edges" in the QDC, since edges all have a single activity, they appear at one point in the querelle and then stay active until the end.
-#reconcile.vertex.activity(QDC_text_dyn, mode = "match.to.edges", edge.active.default = FALSE) #What does changing this setting do? Not much it seems
-#reconcile.vertex.activity(QDC_text_dyn, mode = "encompass.edges")
-#reconcile.edge.activity(QDC_text_dyn, mode = "match.to.vertices", active.default = FALSE)
-
-
-
-
-
-
 ### Make animation
 ## Let's make texts appear month by month (i.e. interval of 0.08333333)
 compute.animation(QDC_text_dyn, slice.par=list(start=1761.8, end=1789.9, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), layout.par = list(x = get.vertex.attribute.active(QDC_text_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_text_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
@@ -1421,10 +1409,6 @@ render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white",
 
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
-#QDC_text_dyn %v% "animX" <- get.vertex.attribute.active(QDC_text_anim2, "animation.x", onset = 17898, terminus = 17899)
-#QDC_text_dyn %v% "animY" <- get.vertex.attribute.active(QDC_text_anim2, "animation.y", onset = 17898, terminus = 17899)
-#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animX", y = "animY"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=17620, end=17750, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(QDC_text_dyn %v% "animX", QDC_text_dyn %v% "animY"), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # This doesn't solve the issue of bunching
 start <- 17619
 end <- 17899
 
@@ -1444,33 +1428,6 @@ for (i in seq(from = start,to = end, by=1)) {
 for (i in seq(from = start,to = end, by=1)) {
   activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/4)
 }
-
-#xx2 <- get.vertex.attribute.active(test2, "animation.x", onset = start, terminus = end, return.tea = TRUE)
-#xx <- get.vertex.attribute.active(test, "animation.x", onset = start, terminus = end, return.tea = TRUE)
-#activate.vertex.attribute(x = test2, prefix = "animX", value = xx, onset = 17620, terminus = 17650, dynamic.only = FALSE)
-#yy <- get.vertex.attribute.active(test, "animation.y", onset = 17620, terminus = 17650, return.tea = TRUE)
-#activate.vertex.attribute(x = test2, prefix = "animY", value = yy, onset = 17620, terminus = 17650, dynamic.only = TRUE)
-#test2 <- compute.animation(test2, slice.par=list(start=17620, end=17650, interval=1, aggregate.dur=1, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x.active", y = "animation_y.active"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-
-
-render.d3movie(QDC_text_anim, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
-               plot.par = list(bg="white", mar=c(0,0,0,0),
-               vertex.border="#ffffff",
-               vertex.col = "Type_col",
-#               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
-               main="Querelle des collèges, 1762-1789",
-#              xlab = function(s){paste(trunc((QDC_text_dyn$gal$slice.par$start+1761)+(QDC_text_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-               xlab = function(s){paste(trunc((QDC_text_anim$gal$slice.par$start+QDC_text_anim$gal$slice.par$interval*s)/10))},
-               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-               edge.lwd = 2,
-               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
-               edge.tooltip = function(slice){slice %e% 'Tie_name'},
-               edge.col = "Qual_col", usearrows=TRUE),
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               output.mode = 'HTML', launchBrowser=TRUE, filename="QDC_text_degree_slider_fixed_lessBunched_version3.html",
-               verbose=TRUE)
-
-
 
 ## Recreating the network with new process (as of 2024-02-17)
 
