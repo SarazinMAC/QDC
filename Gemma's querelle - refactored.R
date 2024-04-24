@@ -576,7 +576,7 @@ QDC_vs <- QDC_vs[order(QDC_vs$onset),]
 
 QDC_62_89_bis <- QDC_62_89
 QDC_62_89_bis$`TIE-TEXT`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] <- QDC_62_89_bis$`TIE-PERSON`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] 
-QDC_text_for_pers_net <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_text_for_pers_net <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "order"))
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`ACTOR-TEXT`),]
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`TIE-TEXT`),]
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$Quality),]
@@ -588,15 +588,15 @@ QDC_text_for_pers_net$Quality[QDC_text_for_pers_net$Quality>6] <- QDC_text_for_p
 
 ### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
 
-QDC_text_resp <- data.frame(QDC$`ACTOR-TEXT`, QDC$`Response-TEXT 1`, QDC$Date)
-QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$QDC..Response.TEXT.1.),]
+QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")]
+QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
 QDC_text_resp <- unique(QDC_text_resp)
 
-QDC_text_resp_2 <- data.frame(QDC$`ACTOR-TEXT`, QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$Date)
-QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$QDC..Does.it.respond.to.a.SECOND.catalyst..If.so..which..Response.TEXT.2.),]
+QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")]
+QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
 QDC_text_resp_2 <- unique(QDC_text_resp_2)
 
-colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date")
+colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
 colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
 
 QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
@@ -631,10 +631,14 @@ QDC_pre_62$Qual_col <- c(transparent_red, transparent_red, "grey90", transparent
 # NOTE: still have to figure out how to make dynamic edge attributes change based on edge toggles
 # First combine responses and normal ties, then set edge colour, and attach pre-62 edges
 QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
+rm(QDC_text_resp_2, QDC_text_resp)
+
+QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
+QDC_text_for_pers_net$order=NULL
+
 QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
 QDC_text_for_pers_net <- rbind(QDC_pre_62, QDC_text_for_pers_net)
-rm(QDC_text_resp_2, QDC_text_resp)
 
 QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
 QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
