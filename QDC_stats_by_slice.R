@@ -22,7 +22,7 @@ original_QDC_es <- QDC_es
 
 export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
-text_or_pers <- "text"
+text_or_pers <- "pers"
 
 # TODO: Make the below work with both the text and person network (note last column "Actor_pers")
 #QDC_vs_colnames_to_keep <- c("onset", "terminus", "Actor_code", "Actor_pers")
@@ -34,7 +34,7 @@ start_slice <- 17620
 end_slice <- 17899
 slice_interval <- 1
 
-# Custom functions
+# Custom functions ----------
 
 # Create object to add on multiple edges
 
@@ -68,35 +68,8 @@ find_Nth_largest <- function(x, N) {
   return(names)
 }
 
-# Assign edge spell values of Pre-QdC actors to first onset at which the actors receive a tie
 
-# Actually two functions, one nested in another, because some pre-QDC actors refer to each other
-
-update_edge_spells <- function(spells, spells_to_update, spells_for_updating) {
-  onsets <- data.frame(c(spells_for_updating$Actor_code, spells_for_updating$Tie_code), c(spells_for_updating$onset, spells_for_updating$onset))
-  colnames(onsets) <- c("Actor_code", "onsets")
-  onsets_for_spells_to_update <- onsets[onsets$Actor_code %in% spells_to_update$Actor_code,]
-  onsets_for_spells_to_update <- onsets_for_spells_to_update[order(onsets_for_spells_to_update$Actor_code, onsets_for_spells_to_update$onsets),]
-  onsets_for_spells_to_update <- onsets_for_spells_to_update[!duplicated(onsets_for_spells_to_update$Actor_code),]
-  spells <- dplyr::left_join(spells, onsets_for_spells_to_update, by = "Actor_code")
-  spells$onset[spells$spells_to_update==1] <- spells$onsets[spells$spells_to_update==1]
-  spells$onsets=NULL
-  return(spells)
-}
-  
-
-assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es, .start_slice = start_slice) {
-  #TODO: Insert while loop at the end to keep running the process until edge spells have stopped updating
-  edge_spells$spells_to_update <- (edge_spells$onset<.start_slice)*1
-  pre_qdc_spells <- edge_spells[edge_spells$spells_to_update==1,]
-  qdc_spells <- edge_spells[edge_spells$spells_to_update==0,]
-  edge_spells <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = qdc_spells)
-  edge_spells2 <- update_edge_spells(spells = edge_spells, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells)
-  edge_spells3 <- update_edge_spells(spells = edge_spells2, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells2)
-  edge_spells4 <- update_edge_spells(spells = edge_spells3, spells_to_update = pre_qdc_spells, spells_for_updating = edge_spells3)
-  edge_spells4$spells_to_update=NULL
-  return(edge_spells4)
-}
+# Processing -------------
 
 
 # assign correct onsets to pre_QDC edges
@@ -319,7 +292,12 @@ row_names <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 stats_list <- list()
 for (stat in stats_to_export) {
-  stats_list[[stat]] <- cbind(row_names, as.data.frame(get(stat)))
+  stat_df <- as.data.frame(get(stat))
+  if (stat %in% c("undirected_closeness", "directed_closeness_inversed", "eigenvector_undirected", "eigenvector_inversed")) {
+    stat_df <- sapply(stat_df, function(x) {round(x, digits = 3)})
+    stat_df <- as.data.frame(stat_df)
+  }
+  stats_list[[stat]] <- cbind(row_names, stat_df)
   colnames(stats_list[[stat]])[1] <- slice_or_year
 }
 
@@ -333,9 +311,13 @@ stats_list_transposed <- list()
 stats_list_transposed[["net_stats"]] <- stats_list[["net_stats"]]
 
 for (stat in stats_to_export[stats_to_export!="net_stats"]) {
-  stat_df <- cbind(row_names, as.data.frame(get(stat)))
+  stat_df <- as.data.frame(get(stat))
+  if (stat %in% c("undirected_closeness", "directed_closeness_inversed", "eigenvector_undirected", "eigenvector_inversed")) {
+    stat_df <- sapply(stat_df, function(x) {round(x, digits = 3)})
+    stat_df <- as.data.frame(stat_df)
+  }
+  stat_df <- cbind(row_names, stat_df)
   colnames(stat_df)[1] <- slice_or_year
-  
   new_rownames <- colnames(stat_df)
   stats_transposed <- t(stat_df)
   colnames(stats_transposed) <- row_names
