@@ -77,6 +77,7 @@ QDC <- QDC_file[!empty_rows,] # Only keep rows that return FALSE to the line abo
 ## Restricting dataset to 1762 - 1789, or, for testing, another date range
 QDC_62_89 <- QDC[which(QDC$Date>1761),]
 #QDC_62_89 <- QDC[which(QDC$Date>1771 & QDC$Date<1774),]
+QDC_62_89$order <- 1:nrow(QDC_62_89)
 
 
 #### __Text-based Querelle ####
@@ -122,7 +123,7 @@ QDC_text_nodes <- QDC_text_nodes[order(QDC_text_nodes$Text_Name),]
 
 #### ____Create network object ####
 
-QDC_text <- subset(QDC_62_89, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_text <- subset(QDC_62_89, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "order"))
 QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
 QDC_text <- QDC_text[!is.na(QDC_text$`TIE-TEXT`),]
 QDC_text <- QDC_text[!is.na(QDC_text$Quality),]
@@ -134,15 +135,16 @@ QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
 
 ### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
 
-QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date")]
+QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")]
 QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
 QDC_text_resp <- unique(QDC_text_resp)
 
-QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date")]
+QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")]
 QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
 QDC_text_resp_2 <- unique(QDC_text_resp_2)
 
-colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date"); colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
+colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
+colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
 
 QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
 
@@ -151,6 +153,8 @@ QDC_text_resp[,"Line_type"] <- "dashed"
 
 QDC_text <- rbind(QDC_text, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
+QDC_text <- QDC_text[order(QDC_text$order),]
+QDC_text$order=NULL
 
 QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
 #QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
