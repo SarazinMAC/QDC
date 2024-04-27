@@ -55,6 +55,47 @@ assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es, .start_slice = star
   return(edge_spells4)
 }
 
+# turn years into slices (where years are divided according to the number of actors in each year)
+# Actors (note, not ties) will come in at equal intervals within each year
+
+turn_years_into_slices <- function(df, actor_colname, year_colname = "Date", order_colname = "order") {
+  formatted_df <- df[,c(actor_colname, year_colname, order_colname)]
+  formatted_df <- formatted_df[!duplicated(formatted_df[,c(actor_colname, year_colname)]),]
+  formatted_df <- formatted_df[order(formatted_df[[order_colname]]),]
+  formatted_df[[year_colname]] <- as.numeric(as.character(formatted_df[[year_colname]]))
+  
+  # Extract the number of actors in each year
+  n_actors_per_year <- table(formatted_df[[year_colname]])
+  
+  # Now split year: actors will come in at equal intervals within the year
+  # the last slice of the year = year + 1 - the interval within the year
+  min_year <- min(formatted_df[[year_colname]])
+  max_year <- max(formatted_df[[year_colname]])
+  years <- names(n_actors_per_year) #note: the names of the object are the years in formatted_df
+  for (i in (min_year:max_year)) {
+    if (i %in% years) {
+      year_slices <- seq(from = i, 
+                         to = i + (1 - (1/n_actors_per_year[years==i])), 
+                         length.out = n_actors_per_year[years==i])
+      formatted_df[[year_colname]][formatted_df[[year_colname]]==i] <- year_slices
+    } else {
+      next
+    }
+  }
+  df[[year_colname]] <- formatted_df[[year_colname]][match(
+    unlist(df[[actor_colname]]), formatted_df[[actor_colname]])]
+  return(df)
+}
+
+
+
+
+### Fixing the slider of ndtv: including no decimal points.
+
+#Standard solution: round to one decimal point and Multiply all years by 10 
+
+es_year_splits$onset <- round(es_year_splits$onset, 1)*10
+
 
 
 # Clean dataset of empty rows
@@ -1104,6 +1145,8 @@ render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
 ## First, QDC actors
 
 QDC_text_62_89 <- QDC_62_89[QDC_62_89$Date>1761 & QDC_62_89$Date<1790,]
+test <- turn_years_into_slices(df = QDC_text_62_89, actor_colname = "ACTOR-TEXT", year_colname = "Date", order_colname = "order")
+
 QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date", "order")]
 QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date", "order")]
 colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
@@ -1190,32 +1233,6 @@ rm(QDC_text_62_89)
 
 if (slice_or_year == "slice") {
   
-## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
-
-es_year_splits <- QDC_es[,c("Actor_code", "onset")] # NOTE: This is correct procedure IF database is in right order
-es_year_splits <- unique(es_year_splits)
-es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
-es_year_splits$Actor_code <- as.numeric(as.character(es_year_splits$Actor_code))
-
-w <- table(es_year_splits$onset)
-
-# Now split year: vertices will come in at equal intervals within the year, the last slice of the year is defined as: year + 1 - the interval within the year
-
-for (i in (1762:1789)) {
-  if (i %in% names(w)) {
-    year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-    es_year_splits$onset[es_year_splits$onset==i] <- year_slices
-    } else {
-      next
-    }
-}
-
-
-### Fixing the slider of ndtv: including no decimal points.
-
-#Standard solution: round to one decimal point and Multiply all years by 10 
-
-es_year_splits$onset <- round(es_year_splits$onset, 1)*10
 
 QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$Actor_code), es_year_splits$Actor_code)]
 
