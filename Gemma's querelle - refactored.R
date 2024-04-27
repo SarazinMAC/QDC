@@ -61,7 +61,7 @@ assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es, .start_slice = star
 
 empty_rows <- apply(QDC_file, 1, function(x) {all(is.na(x))}) # records TRUE if the row is full of NAs
 QDC <- QDC_file[!empty_rows,] # Only keep rows that return FALSE to the line above
-
+QDC$order <- 1:nrow(QDC)
 
 
 ##### Cleaning base dataset #####
@@ -77,7 +77,7 @@ QDC <- QDC_file[!empty_rows,] # Only keep rows that return FALSE to the line abo
 ## Restricting dataset to 1762 - 1789, or, for testing, another date range
 QDC_62_89 <- QDC[which(QDC$Date>1761),]
 #QDC_62_89 <- QDC[which(QDC$Date>1771 & QDC$Date<1774),]
-QDC_62_89$order <- 1:nrow(QDC_62_89)
+
 
 
 #### __Text-based Querelle ####
@@ -137,11 +137,11 @@ QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
 
 QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")]
 QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
-QDC_text_resp <- unique(QDC_text_resp)
+QDC_text_resp <- QDC_text_resp[!duplicated(QDC_text_resp[,c("ACTOR-TEXT", "Response-TEXT 1", "Date")]),]
 
 QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")]
 QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
-QDC_text_resp_2 <- unique(QDC_text_resp_2)
+QDC_text_resp_2 <- QDC_text_resp_2[!duplicated(QDC_text_resp_2[,c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date")]),]
 
 colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
 colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
@@ -154,7 +154,6 @@ QDC_text_resp[,"Line_type"] <- "dashed"
 QDC_text <- rbind(QDC_text, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
 QDC_text <- QDC_text[order(QDC_text$order),]
-QDC_text$order=NULL
 
 QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
 #QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
@@ -1104,30 +1103,28 @@ render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
 # Create vertex spell
 ## First, QDC actors
 
-QDC_text_62_89 <- QDC_text[QDC_text$Date>1761 & QDC_text$Date<1790,]
-QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date")]
-QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date")]
-colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_all)
+QDC_text_62_89 <- QDC_62_89[QDC_62_89$Date>1761 & QDC_62_89$Date<1790,]
+QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date", "order")]
+QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date", "order")]
+colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
 
 # Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
 
 QDC_pre_62 <- QDC[QDC$Date<1762,]
-QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date"))
+QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
 QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
 
 QDC_text_all <- rbind(QDC_pre_62, QDC_text_62_89, QDC_text_62_89_inversed)
-QDC_vs <- as.data.frame(table(QDC_text_all$`ACTOR-TEXT`, QDC_text_all$Date))
-QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
-QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
-QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
-QDC_vs <- QDC_vs[,1:2]
-colnames(QDC_vs) <- c("Actor_text", "onset")
+QDC_vs <- unique(QDC_text_all[, c("ACTOR-TEXT", "Date", "order")])
+QDC_vs <- QDC_vs[!is.na(QDC_vs$`ACTOR-TEXT`),]
+QDC_vs <- QDC_vs[order(QDC_vs$order),]
+QDC_vs <- QDC_vs[!duplicated(QDC_vs$`ACTOR-TEXT`),]
+colnames(QDC_vs) <- c("Actor_text", "onset","order_of_entry")
 QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
 QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year + 1 - in most live uses, this should return 1790 
-QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_text)
-QDC_vs <- QDC_vs[,c(2,3,4,1)]
+QDC_vs[, "Actor_code"] <- 1:nrow(QDC_vs)
+QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code","Actor_text", "order_of_entry")]
 QDC_vs$Actor_text <- as.character(QDC_vs$Actor_text)
-QDC_vs <- QDC_vs[order(QDC_vs$onset),]
 QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_text=="D'Alembert (1753)"| QDC_vs$Actor_text=="La Chalotais (1763)"| QDC_vs$Actor_text=="Rousseau (1762)", QDC_vs$Actor_text, "")
 QDC_vs[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_vs$Actor_text), QDC_text_nodes$Text_Name)]
 
