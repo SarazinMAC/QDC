@@ -1164,6 +1164,9 @@ QDC_pre_62 <- QDC[QDC$Date<1762,]
 QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
 QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
 
+# Colour for pre-QdC people: #bcddfb
+# colour for pre-QDC institutions: #f5a4db
+
 if (slice_or_year == "slice") {
   QDC_pre_62$Date <- QDC_pre_62$Date*10
 }
@@ -1207,10 +1210,11 @@ QDC_pre_62$Quality[QDC_pre_62$Quality>6] <- QDC_pre_62$Quality[QDC_pre_62$Qualit
 
 # Set edge colours here as pre-QdC edges have different colours to QdC edges
 
-transparent_red <- "lightcoral"
-transparent_green <- "palegreen"
-transparent_orange <- "lightsalmon"
-QDC_pre_62$Qual_col <- c(transparent_red, transparent_red, "grey90", transparent_green, transparent_green, transparent_orange, "grey90", "grey90", "gray90")[QDC_pre_62$Quality]
+pre_qdc_negative <- "grey90"
+pre_qdc_positive <- "grey90"
+pre_qdc_ambivalent <- "grey90"
+pre_qdc_neutral <- "grey90"
+QDC_pre_62$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62$Quality]
 
 # now, merge both
 
@@ -1291,6 +1295,19 @@ for (col in colnames(QDC_text_attr_dyn)) {
   QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
 }
 
+# Add Dynamic edge attributes
+
+# loop over edge data to add the dynamic attributes on the edge
+for(row in 1:nrow(QDC_es_dynamic_vis)){
+  # get the id of the edge from its tail and head
+  edge_id <- get.edgeIDs(QDC_text_dyn,v=QDC_es_dynamic_vis$Actor_code[row],
+                     alter=QDC_es_dynamic_vis$Tie_code[row])
+  activate.edge.attribute(QDC_text_dyn,'edge_colour',QDC_es_dynamic_vis$Qual_col[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  activate.edge.attribute(QDC_text_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+}
+
 
 ##edge attributes
 # Note: this doesn't work as "Tie_name" is actually a dynamic edge attribute
@@ -1317,6 +1334,7 @@ chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
 for (char in chars[,1]) {
   QDC_text_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "vertex.names") 
   QDC_text_dyn %v% "Text_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
+  QDC_text_dyn %v% "Actor_text" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
 }; rm(char)
 
 
@@ -1358,14 +1376,14 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
 
 filename <- "QDC_text_with_pre_QdC_ties_correct_order.html"
 
-#render.d3movie(QDC_text_anim2,
-render.d3movie(QDC_text_anim,
+render.d3movie(QDC_text_anim2,
+#render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
                displaylabels = FALSE,
                plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
                vertex.tooltip = function(slice) {slice %v% 'Actor_text'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
-               edge.col = "Qual_col",
+               edge.col = "edge_colour",
 #               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
                vertex.border="#ffffff",
                vertex.col = "Type_col",
