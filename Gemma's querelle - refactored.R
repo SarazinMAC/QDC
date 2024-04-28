@@ -13,7 +13,7 @@ library(networkDynamic)
 
 # Configurable values
 
-Data_name <- "QDC_2024_01_31.xlsx"
+Data_name <- "QDC_2024_04_28.xlsx"
 Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
@@ -1147,6 +1147,8 @@ QDC_text_62_89 <- QDC_62_89[QDC_62_89$Date>1761 & QDC_62_89$Date<1790,]
 if (slice_or_year == "slice")  {
   QDC_text_62_89 <- turn_years_into_slices(df = QDC_text_62_89, actor_colname = "ACTOR-TEXT", year_colname = "Date",
                                            order_colname = "order", round = TRUE)
+  # Or Set onset manually for testing
+  #QDC_text_62_89$Date <- QDC_text_62_89$Date*10
 }
 QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date", "order")]
 QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date", "order")]
@@ -1165,11 +1167,11 @@ if (slice_or_year == "slice") {
 QDC_text_all <- rbind(QDC_pre_62, QDC_text_62_89, QDC_text_62_89_inversed)
 QDC_vs <- unique(QDC_text_all[, c("ACTOR-TEXT", "Date", "order")])
 QDC_vs <- QDC_vs[!is.na(QDC_vs$`ACTOR-TEXT`),]
-QDC_vs <- QDC_vs[order(QDC_vs$order),]
+QDC_vs <- QDC_vs[order(QDC_vs$Date, QDC_vs$order),]
 QDC_vs <- QDC_vs[!duplicated(QDC_vs$`ACTOR-TEXT`),]
 colnames(QDC_vs) <- c("Actor_text", "onset","order_of_entry")
 QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
-QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year + 1 - in most live uses, this should return 1790 
+QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year/slice + 1 - in most live uses, this should return 1790/17900 
 QDC_vs[, "Actor_code"] <- 1:nrow(QDC_vs)
 QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code","Actor_text", "order_of_entry")]
 QDC_vs$Actor_text <- as.character(QDC_vs$Actor_text)
@@ -1239,18 +1241,11 @@ rm(QDC_text_62_89)
 if (slice_or_year == "slice") {
   
 
-QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$Actor_code), es_year_splits$Actor_code)]
-
-# Or Set onset manually for testing
-#QDC_es$onset <- QDC_es$onset*10
-#QDC_vs$onset <- QDC_vs$onset*10
 
 
 QDC_es$terminus <- QDC_es$terminus*10
 QDC_vs$terminus <- QDC_vs$terminus*10
 
-
-rm(es_year_splits)
 
 }
 
