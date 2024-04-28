@@ -1249,31 +1249,6 @@ QDC_vs$terminus <- QDC_vs$terminus*10
 
 }
 
-## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
-## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
-
-x <- as.data.frame(table(QDC_es$Actor_code, QDC_es$onset))
-x <- x[x$Freq>0, 1:2]
-xx <- as.data.frame(table(QDC_es$Tie_code, QDC_es$onset))
-xx <- xx[xx$Freq>0, 1:2] #Note: This should be the same dimension as data.frame(QDC_es$Tie_code, QDC_es$onset), since each tie is given its unique onset  
-x <- rbind(x, xx)
-colnames(x) <- c("Actor_code", "onset")
-x$onset <- as.numeric(as.character(x$onset))
-x$Actor_code <- as.numeric(as.character(x$Actor_code))
-rm(xx)
-
-## order & remove duplicated in x
-
-w <- x[with(x, order(Actor_code, onset)),]
-w <- w[!(duplicated(w$Actor_code)),]
-
-## Using matching, replace Dates in QDC_vs
-
-QDC_vs$onset <- w$onset[match(unlist(QDC_vs$Actor_code), w$Actor_code)]
-
-rm(w, x)
-
-
 
 
 ## Create network dynamic object
