@@ -127,7 +127,10 @@ QDC_62_89 <- QDC[which(QDC$Date>1761),]
 # Two steps: Create a database of all nodal attribute information, then create a list of actors (that both send and receive ties) and populate with nodal attributes
 ## First create a single attribute record for every entry in Actor-text column (which normally includes all actors in tie text and response text)
 QDC_text <- subset(QDC, select=
-                     c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", "Gender", "Response-TEXT 1", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Place"))
+                     c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", 
+                       "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", 
+                       "Gender", "Response-TEXT 1", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2",
+                       "Place"))
 QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
 
 #QDC_text_nodes_2 <- QDC_text[!duplicated(QDC_text$`ACTOR-TEXT`),]
@@ -145,17 +148,18 @@ QDC_text_nodes <- data.frame(QDC_text_nodes[!is.na(QDC_text_nodes)])
 colnames(QDC_text_nodes) <- "Actors"
 
 ## Now fill with attributes using matching
-QDC_text_nodes[,2] <- QDC_text_node_data$Actor_type[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes[,3] <- QDC_text_node_data$Gender[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes[,4] <- QDC_text_node_data$Date[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$V2 <- as.numeric(QDC_text_nodes$V2)
-QDC_text_nodes$V2[which(is.na(QDC_text_nodes$V2))] <- 99 #missing data coded 99
-QDC_text_nodes$V3 <- as.numeric(QDC_text_nodes$V3)
-QDC_text_nodes$V3[which(is.na(QDC_text_nodes$V3))] <- 99 #missing data coded 99
-QDC_text_nodes$V4 <- as.numeric(as.character(QDC_text_nodes$V4))
-QDC_text_nodes$V4[which(is.na(QDC_text_nodes$V4))] <- 99 #missing data coded 99
-
+QDC_text_nodes$Actor_type <- QDC_text_node_data$Actor_type[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes$Gender <- QDC_text_node_data$Gender[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes$Date <- QDC_text_node_data$Date[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+QDC_text_nodes$Actor_type <- as.numeric(QDC_text_nodes$Actor_type)
+QDC_text_nodes$Actor_type[which(is.na(QDC_text_nodes$Actor_type))] <- 99 #missing data coded 99
+QDC_text_nodes$Gender <- as.numeric(QDC_text_nodes$Gender)
+QDC_text_nodes$Gender[which(is.na(QDC_text_nodes$Gender))] <- 99 #missing data coded 99
+QDC_text_nodes$Date <- as.numeric(as.character(QDC_text_nodes$Date))
+QDC_text_nodes$Date[which(is.na(QDC_text_nodes$Date))] <- 99 #missing data coded 99
 colnames(QDC_text_nodes) <- c("Text_Name", "Actor_type", "Gender", "Date")
+QDC_text_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_nodes$Actor_type]
+
 QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
 QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
 QDC_text_nodes <- QDC_text_nodes[order(QDC_text_nodes$Text_Name),]
@@ -205,7 +209,7 @@ colnames(QDC_text_attr) <- "Text_Name"
 ## Import Actor type
 QDC_text_attr$Text_Name <- as.character(QDC_text_attr$Text_Name)
 QDC_text_attr[,"Actor_type"] <- QDC_text_nodes$Actor_type[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
-QDC_text_attr$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_attr$Actor_type]
+QDC_text_attr$Type_col <- QDC_text_nodes$Type_col[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
 
 ## Create a vertex attribute for the number of sides of the vertex - if the actor is an authority or institution (i.e. actor type 2), then a pentagon, otherwise a circle
 QDC_text_attr[,"Vertex_sides"] <- ifelse(QDC_text_attr$Actor_type==2, 4, 50) # 50 means 50 sides, which for some reason ends up appearing as a circle
@@ -1236,19 +1240,9 @@ QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "ACTOR-TEXT", "TI
 colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 rm(QDC_text_62_89)
 
-### Split onset times in each year, if using slices and not years
+# Update QDC_es onsets with QDC_vs onsets
 
-if (slice_or_year == "slice") {
-  
-
-
-
-QDC_es$terminus <- QDC_es$terminus*10
-QDC_vs$terminus <- QDC_vs$terminus*10
-
-
-}
-
+QDC_es$onset <- QDC_vs$onset[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
 
 
 ## Create network dynamic object
@@ -1274,7 +1268,7 @@ QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vi
 
 QDC_es_dynamic_vis <- rbind(QDC_es_pre_62, QDC_es_dynamic_vis)
 
-QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.spells = QDC_es_dynamic_vis, create.TEAs = TRUE)
+QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.spells = QDC_es_dynamic_vis[,c(1:4, 9)], create.TEAs = TRUE)
 
 # Previous version, with base.net defined:
 #QDC_text_dyn <- networkDynamic(base.net = QDC_text_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
@@ -1284,13 +1278,21 @@ QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.sp
 ## Define vertex and edge attributes
 
 # vertex attributes
-QDC_text_attr_dyn <- QDC_text_attr[order(QDC_text_attr$Text_Name),]
+# re-creating a temporary order variable in QDC_vs_dynamic_vis in case the existing order variable is not in order
+QDC_vs_dynamic_vis$order <- 1:nrow(QDC_vs_dynamic_vis)
+QDC_text_nodes$node_order_dynamic_vis <- QDC_vs_dynamic_vis$order[match(
+  unlist(QDC_text_nodes$Text_Name), QDC_vs_dynamic_vis$Actor_text)]
+QDC_text_nodes$order_of_entry <- QDC_vs_dynamic_vis$order_of_entry[match(
+  unlist(QDC_text_nodes$Text_Name), QDC_vs_dynamic_vis$Actor_text)]
+
+QDC_text_attr_dyn <- QDC_text_nodes[order(QDC_text_nodes$node_order_dynamic_vis),]
 
 for (col in colnames(QDC_text_attr_dyn)) {
   QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
 }
 
-# edge attributes
+
+##edge attributes
 # Note: this doesn't work as "Tie_name" is actually a dynamic edge attribute
 #for (col in c("Tie_name", "sent_to_rousseau")) {
 #  edge_name <- QDC_text_dyn %e% "Tie_name"
@@ -1323,14 +1325,14 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17899
+end <- 17900
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 QDC_text_anim2 <- QDC_text_dyn
 
@@ -1354,13 +1356,14 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_ties.html"
+filename <- "QDC_text_with_pre_QdC_ties_correct_order.html"
 
-render.d3movie(QDC_text_anim2,
+#render.d3movie(QDC_text_anim2,
+render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
                displaylabels = FALSE,
                plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
-               vertex.tooltip = function(slice) {slice %v% 'Text_Name'},
+               vertex.tooltip = function(slice) {slice %v% 'Actor_text'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
                edge.col = "Qual_col",
 #               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
