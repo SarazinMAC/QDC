@@ -58,7 +58,8 @@ assign_pre_QDC_edge_onsets <- function(edge_spells = QDC_es, .start_slice = star
 # turn years into slices (where years are divided according to the number of actors in each year)
 # Actors (note, not ties) will come in at equal intervals within each year
 
-turn_years_into_slices <- function(df, actor_colname, year_colname = "Date", order_colname = "order") {
+turn_years_into_slices <- function(df, actor_colname, year_colname = "Date",
+                                   order_colname = "order", round = TRUE) {
   formatted_df <- df[,c(actor_colname, year_colname, order_colname)]
   formatted_df <- formatted_df[!duplicated(formatted_df[,c(actor_colname, year_colname)]),]
   formatted_df <- formatted_df[order(formatted_df[[order_colname]]),]
@@ -68,6 +69,7 @@ turn_years_into_slices <- function(df, actor_colname, year_colname = "Date", ord
   n_actors_per_year <- table(formatted_df[[year_colname]])
   
   # Now split year: actors will come in at equal intervals within the year
+  # Store slices in formatted_df
   # the last slice of the year = year + 1 - the interval within the year
   min_year <- min(formatted_df[[year_colname]])
   max_year <- max(formatted_df[[year_colname]])
@@ -82,19 +84,16 @@ turn_years_into_slices <- function(df, actor_colname, year_colname = "Date", ord
       next
     }
   }
+  # If relevant, round to one decimal point and Multiply all years by 10
+  if (round == TRUE) {
+    formatted_df[[year_colname]] <- round(formatted_df[[year_colname]], 1)*10
+  }
+  # Attach the new slices onto the original df
   df[[year_colname]] <- formatted_df[[year_colname]][match(
     unlist(df[[actor_colname]]), formatted_df[[actor_colname]])]
   return(df)
 }
 
-
-
-
-### Fixing the slider of ndtv: including no decimal points.
-
-#Standard solution: round to one decimal point and Multiply all years by 10 
-
-es_year_splits$onset <- round(es_year_splits$onset, 1)*10
 
 
 
@@ -1145,8 +1144,10 @@ render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
 ## First, QDC actors
 
 QDC_text_62_89 <- QDC_62_89[QDC_62_89$Date>1761 & QDC_62_89$Date<1790,]
-test <- turn_years_into_slices(df = QDC_text_62_89, actor_colname = "ACTOR-TEXT", year_colname = "Date", order_colname = "order")
-
+if (slice_or_year == "slice")  {
+  QDC_text_62_89 <- turn_years_into_slices(df = QDC_text_62_89, actor_colname = "ACTOR-TEXT", year_colname = "Date",
+                                           order_colname = "order", round = TRUE)
+}
 QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date", "order")]
 QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date", "order")]
 colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
@@ -1156,6 +1157,10 @@ colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
 QDC_pre_62 <- QDC[QDC$Date<1762,]
 QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
 QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
+
+if (slice_or_year == "slice") {
+  QDC_pre_62$Date <- QDC_pre_62$Date*10
+}
 
 QDC_text_all <- rbind(QDC_pre_62, QDC_text_62_89, QDC_text_62_89_inversed)
 QDC_vs <- unique(QDC_text_all[, c("ACTOR-TEXT", "Date", "order")])
