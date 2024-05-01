@@ -1160,18 +1160,15 @@ colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
 
 # Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
 
-QDC_pre_62 <- QDC[QDC$Date<1762,]
-QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
-
-# Colour for pre-QdC people: #bcddfb
-# colour for pre-QDC institutions: #f5a4db
+QDC_pre_62_nodes <- QDC[QDC$Date<1762,]
+QDC_pre_62_nodes <- subset(QDC_pre_62_nodes, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
+QDC_pre_62_nodes <- QDC_pre_62_nodes[!is.na(QDC_pre_62_nodes$`ACTOR-TEXT`),]
 
 if (slice_or_year == "slice") {
-  QDC_pre_62$Date <- QDC_pre_62$Date*10
+  QDC_pre_62_nodes$Date <- QDC_pre_62_nodes$Date*10
 }
 
-QDC_text_all <- rbind(QDC_pre_62, QDC_text_62_89, QDC_text_62_89_inversed)
+QDC_text_all <- rbind(QDC_pre_62_nodes, QDC_text_62_89, QDC_text_62_89_inversed)
 QDC_vs <- unique(QDC_text_all[, c("ACTOR-TEXT", "Date", "order")])
 QDC_vs <- QDC_vs[!is.na(QDC_vs$`ACTOR-TEXT`),]
 QDC_vs <- QDC_vs[order(QDC_vs$Date, QDC_vs$order),]
@@ -1198,15 +1195,15 @@ QDC_text_62_89$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3
 # NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
 # Similarly, in network stats, their edge onsets should be set to that value
 
-QDC_pre_62 <- QDC[QDC$Date<1762,]
-QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
+QDC_pre_62_edges <- QDC[QDC$Date<1762,]
+QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
 
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`TIE-TEXT`),]
+QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges$`ACTOR-TEXT`),]
+QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges$`TIE-TEXT`),]
 
 # negative 'Quality' values screw with the network package. Let's just make all Quality values positive
-QDC_pre_62$Quality <- QDC_pre_62$Quality + 3
-QDC_pre_62$Quality[QDC_pre_62$Quality>6] <- QDC_pre_62$Quality[QDC_pre_62$Quality>6]-1
+QDC_pre_62_edges$Quality <- QDC_pre_62_edges$Quality + 3
+QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6] <- QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6]-1
 
 # Set edge colours here as pre-QdC edges have different colours to QdC edges
 
@@ -1214,11 +1211,11 @@ pre_qdc_negative <- "grey90"
 pre_qdc_positive <- "grey90"
 pre_qdc_ambivalent <- "grey90"
 pre_qdc_neutral <- "grey90"
-QDC_pre_62$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62$Quality]
+QDC_pre_62_edges$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62_edges$Quality]
 
 # now, merge both
 
-QDC_es <- rbind(QDC_pre_62, QDC_text_62_89)
+QDC_es <- rbind(QDC_pre_62_edges, QDC_text_62_89)
 
 # Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
 QDC_es$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es$Quality]
@@ -1262,7 +1259,7 @@ QDC_es_dynamic_vis <- QDC_es
 
 if (slice_or_year == "slice") {
   QDC_es_pre_62 <- QDC_es_dynamic_vis[QDC_es_dynamic_vis$onset<17620,]
-  QDC_es_pre_62$Qual_col <- c(transparent_red, transparent_red, "grey90", transparent_green, transparent_green, transparent_orange, "grey90", "grey90", "gray90")[QDC_es_pre_62$Quality]
+  QDC_es_pre_62$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_es_pre_62$Quality]
   start_slice <- 17620
 } else if (slice_or_year == "year") {
   start_slice <- 1762
@@ -1295,6 +1292,55 @@ for (col in colnames(QDC_text_attr_dyn)) {
   QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
 }
 
+# Now to add changing vertex colours as dynamic vertex attribute
+# Colour for pre-QdC people: #bcddfb
+# colour for pre-QDC institutions: #f5a4db
+# There are no pre-QdC periodicals, so keep gold for them.
+
+# Create object to store dynamic vertex attributes
+
+QDC_vs_dynamic_vis_attr <- QDC_vs_dynamic_vis
+
+# import relevant variables into QDC_vs_dynamic_vis_attr
+
+QDC_vs_dynamic_vis_attr$Actor_type <- QDC_text_attr_dyn$Actor_type[match(
+  unlist(QDC_vs_dynamic_vis_attr$Actor_text), QDC_text_attr_dyn$Text_Name)]
+
+QDC_vs_dynamic_vis_attr$Type_col <- QDC_text_attr_dyn$Type_col[match(
+  unlist(QDC_vs_dynamic_vis_attr$Actor_text), QDC_text_attr_dyn$Text_Name)]
+
+# add pre-QdC colours to QDC_vs_dynamic_vis_attr for pre-QdC nodes
+
+if (slice_or_year=="slice") {
+  pre_62 <- QDC_vs_dynamic_vis_attr[QDC_vs_dynamic_vis_attr$onset<17620,]
+} else if (slice_or_year=="year") {
+  pre_62 <- QDC_vs_dynamic_vis_attr[QDC_vs_dynamic_vis_attr$onset<1762,]  
+}
+
+pre_62$vertex_colour <- c("#BCDDFB", "#F5A4DB", "gold")[pre_62$Actor_type]
+
+# set onset (year/slice) at which pre-QdC nodes achieve their final colour
+
+onset_of_change <- QDC_es_dynamic_vis[QDC_es_dynamic_vis$Actor_code %in% pre_62$Actor_code, 
+                                      c("onset", "Actor_code")]
+onset_of_change <- unique(onset_of_change)
+onset_of_change <- onset_of_change[duplicated(onset_of_change$Actor_code),] #the duplicated values come in later
+
+QDC_vs_dynamic_vis_attr$onset_of_change <- onset_of_change$onset[match(
+  unlist(QDC_vs_dynamic_vis_attr$Actor_code), onset_of_change$Actor_code)]
+
+QDC_vs_dynamic_vis_attr$vertex_colour <- QDC_vs_dynamic_vis_attr$Type_col
+QDC_vs_dynamic_vis_attr <- rbind(pre_62, QDC_vs_dynamic_vis_attr)
+
+# loop over vertex data to add the dynamic attributes on the vertices
+for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
+  activate.vertex.attribute(QDC_text_dyn,'vertex_colour',QDC_es_dynamic_vis$Qual_col[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  activate.edge.attribute(QDC_text_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+}
+
+
 # Add Dynamic edge attributes
 
 # loop over edge data to add the dynamic attributes on the edge
@@ -1307,6 +1353,8 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
   activate.edge.attribute(QDC_text_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
 }
+
+
 
 
 ##edge attributes
@@ -1374,7 +1422,7 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_ties_correct_order.html"
+filename <- "QDC_text_with_pre_QdC_ties_correct_order_normal.html"
 
 render.d3movie(QDC_text_anim2,
 #render.d3movie(QDC_text_anim,
