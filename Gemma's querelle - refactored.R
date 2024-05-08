@@ -32,6 +32,7 @@ QDC_file <- import(paste0(Data_path, Data_name))
 
 update_edge_spells <- function(spells, spells_to_update, spells_for_updating) {
   onsets <- data.frame(c(spells_for_updating$Actor_code, spells_for_updating$Tie_code), c(spells_for_updating$onset, spells_for_updating$onset))
+  onsets <- onsets[complete.cases(onsets),]
   colnames(onsets) <- c("Actor_code", "onsets")
   onsets_for_spells_to_update <- onsets[onsets$Actor_code %in% spells_to_update$Actor_code,]
   onsets_for_spells_to_update <- onsets_for_spells_to_update[order(onsets_for_spells_to_update$Actor_code, onsets_for_spells_to_update$onsets),]
@@ -1321,10 +1322,17 @@ pre_62$vertex_colour <- c("#BCDDFB", "#F5A4DB", "gold")[pre_62$Actor_type]
 
 # set onset (year/slice) at which pre-QdC nodes achieve their final colour
 
-onset_of_change <- QDC_es_dynamic_vis[QDC_es_dynamic_vis$Actor_code %in% pre_62$Actor_code, 
+colnames(QDC_text_all) <- c("Actor_text", "Tie_text", "onset", "order")
+QDC_text_all$Actor_code <- QDC_vs_dynamic_vis$Actor_code[match(unlist(QDC_text_all$Actor_text), QDC_vs_dynamic_vis$Actor_text)]
+QDC_text_all$Tie_code <- QDC_vs_dynamic_vis$Actor_code[match(unlist(QDC_text_all$Tie_text), QDC_vs_dynamic_vis$Actor_text)]
+
+onset_of_change <- assign_pre_QDC_edge_onsets(edge_spells = QDC_text_all, .start_slice = start_slice)
+
+onset_of_change <- onset_of_change[onset_of_change$Actor_code %in% pre_62$Actor_code, 
                                       c("onset", "Actor_code")]
 onset_of_change <- unique(onset_of_change)
-onset_of_change <- onset_of_change[duplicated(onset_of_change$Actor_code),] #the duplicated values come in later
+onset_of_change <- onset_of_change[order(onset_of_change$Actor_code, onset_of_change$onset),]
+onset_of_change <- onset_of_change[!duplicated(onset_of_change$Actor_code),]
 
 QDC_vs_dynamic_vis_attr$onset_of_change <- onset_of_change$onset[match(
   unlist(QDC_vs_dynamic_vis_attr$Actor_code), onset_of_change$Actor_code)]
