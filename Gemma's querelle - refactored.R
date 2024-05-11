@@ -1337,15 +1337,19 @@ onset_of_change <- onset_of_change[!duplicated(onset_of_change$Actor_code),]
 QDC_vs_dynamic_vis_attr$onset_of_change <- onset_of_change$onset[match(
   unlist(QDC_vs_dynamic_vis_attr$Actor_code), onset_of_change$Actor_code)]
 
+QDC_vs_dynamic_vis_attr$onset[!is.na(QDC_vs_dynamic_vis_attr$onset_of_change)] <- QDC_vs_dynamic_vis_attr$onset_of_change[!is.na(QDC_vs_dynamic_vis_attr$onset_of_change)]
+QDC_vs_dynamic_vis_attr$onset_of_change=NULL
+
 QDC_vs_dynamic_vis_attr$vertex_colour <- QDC_vs_dynamic_vis_attr$Type_col
 QDC_vs_dynamic_vis_attr <- rbind(pre_62, QDC_vs_dynamic_vis_attr)
 
 # loop over vertex data to add the dynamic attributes on the vertices
 for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
-  activate.vertex.attribute(QDC_text_dyn,'vertex_colour',QDC_es_dynamic_vis$Qual_col[row],
-                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
-  activate.edge.attribute(QDC_text_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
-                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  activate.vertex.attribute(x = QDC_text_dyn, prefix = 'vertex_colour',
+                            value = QDC_vs_dynamic_vis_attr$vertex_colour[row],
+                          onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
+                          v=QDC_vs_dynamic_vis_attr$Actor_code[row])
+
 }
 
 
@@ -1399,7 +1403,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17900
+end <- 17640
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1430,7 +1434,7 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_ties_correct_order_normal.html"
+filename <- "QDC_text_with_pre_QdC_colours_test.html"
 
 render.d3movie(QDC_text_anim2,
 #render.d3movie(QDC_text_anim,
@@ -1442,7 +1446,7 @@ render.d3movie(QDC_text_anim2,
                edge.col = "edge_colour",
 #               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
                vertex.border="#ffffff",
-               vertex.col = "Type_col",
+               vertex.col = "vertex_colour",
                xlab = year_label,
                vertex.cex = node_size,
                usearrows=TRUE,
