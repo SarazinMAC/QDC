@@ -1229,9 +1229,7 @@ QDC_es[, "Actor_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`ACTOR-TEX
 QDC_es[, "Tie_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
 QDC_es[, "Tie_name"] <- paste0(QDC_es$Actor_Corpus_num, " &#8594 ", QDC_es$Tie_Corpus_num) # Note 07.08.2022: this attribute doesn't have a purpose yet, but it may do one day.
 
-## Create dynamic edge attribute 
-
-# Is edge sent to Rousseau?
+## Create dynamic edge attribute: Is edge sent to Rousseau?
 
 rousseau_codes <- QDC_vs$Actor_code[grepl("Rousseau", QDC_vs$Actor_text)] # note that I have given the object a plural name but am only expecting a single Rousseau code
 QDC_es$sent_to_rousseau <- (QDC_es$Tie_code %in% rousseau_codes)*1
@@ -1367,18 +1365,6 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
 }
 
 
-
-
-##edge attributes
-# Note: this doesn't work as "Tie_name" is actually a dynamic edge attribute
-#for (col in c("Tie_name", "sent_to_rousseau")) {
-#  edge_name <- QDC_text_dyn %e% "Tie_name"
-#  edge_attribute <- QDC_es[[col]]
-#  ordered_edge_attribute <- edge_attribute[match(unlist(edge_name), QDC_es$Tie_name)]
-#  QDC_text_dyn %e% col <- ordered_edge_attribute
-#}
-
-#QDC_text_dyn %e% "sent_to_rousseau" <- QDC_es$
 ## Remove isolate nodes - disabled as of 11/02/2024
 
 #Isol <- import(paste0(Data_path, "OUTLIERS in QUERELLE.xlsx")) 
@@ -1403,7 +1389,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17640
+end <- 17890
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1457,6 +1443,14 @@ render.d3movie(QDC_text_anim2,
 ### NOTE: if you want to switch the x and y co-ordinates of the nodes, you need to switch QDC_text_dyn %v% "animation.x.active" and QDC_text_dyn %v% "animation.y.active" vertex attributes (these attributes represent the node co-ordinates. They are re-calculated each time the compute.animation function is run.)
 
 save(list = c("QDC_text_anim2", "QDC_text_anim_final"), file = "QDC_text_degree_slider_fixed_lessBunched_version3.RData")
+
+
+
+
+
+
+
+
 
 ## Note: the following doens't work - next solution is to try to set a dynamic vertex attribute using activate.vertex.attribute or something like that
 animationx <- (QDC_text_anim %v% "animation.x.active")
