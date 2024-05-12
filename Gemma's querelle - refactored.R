@@ -95,6 +95,50 @@ turn_years_into_slices <- function(df, actor_colname, year_colname = "Date",
   return(df)
 }
 
+# Create vertex spells - for dynamic visuals
+
+create_vertex_spells <- function(main_df, node_attr_df,
+                                 actor_colname, final_actor_colname, alter_colname,
+                                 start_year = 1762, end_year = 1789,
+                                 .slice_or_year = slice_or_year,
+                                 year_colname = "Date", order_colname = "order") {
+  
+  QDC_62_89 <- main_df[main_df[[year_colname]] >= start_year & main_df[[year_colname]] <= end_year,]
+  if (.slice_or_year == "slice")  {
+    QDC_62_89 <- turn_years_into_slices(df = QDC_62_89, actor_colname = actor_colname, year_colname = year_colname,
+                                             order_colname = order_colname, round = TRUE)
+    # Or Set onset manually for testing
+    #QDC_62_89[[year_colname]] <- QDC_62_89[[year_colname]]*10
+  }
+  QDC_62_89 <- QDC_62_89[,c(actor_colname,alter_colname,year_colname, order_colname)]
+  QDC_62_89_inversed <- QDC_62_89[,c(alter_colname,actor_colname,year_colname, order_colname)]
+  colnames(QDC_62_89_inversed) <- colnames(QDC_62_89)
+  
+  # Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
+  
+  QDC_pre_62_nodes <- main_df[main_df[[year_colname]]<start_year,]
+  QDC_pre_62_nodes <- subset(QDC_pre_62_nodes, select=c(actor_colname, alter_colname, year_colname, order_colname))
+  QDC_pre_62_nodes <- QDC_pre_62_nodes[!is.na(QDC_pre_62_nodes[[actor_colname]]),]
+  
+  if (.slice_or_year == "slice") {
+    QDC_pre_62_nodes[[year_colname]] <- QDC_pre_62_nodes[[year_colname]]*10
+  }
+  
+  QDC_all <- rbind(QDC_pre_62_nodes, QDC_62_89, QDC_62_89_inversed)
+  QDC_vs <- unique(QDC_all[, c(actor_colname, year_colname, order_colname)])
+  QDC_vs <- QDC_vs[!is.na(QDC_vs[[actor_colname]]),]
+  QDC_vs <- QDC_vs[order(QDC_vs[[year_colname]], QDC_vs[[order_colname]]),]
+  QDC_vs <- QDC_vs[!duplicated(QDC_vs[[actor_colname]]),]
+  colnames(QDC_vs) <- c(final_actor_colname, "onset","order_of_entry")
+  QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
+  QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year/slice + 1 - in most live uses, this should return 1790/17900 
+  QDC_vs[, "Actor_code"] <- 1:nrow(QDC_vs)
+  QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code",final_actor_colname, "order_of_entry")]
+  QDC_vs[[final_actor_colname]] <- as.character(QDC_vs[[final_actor_colname]])
+  #QDC_vs[, "Actor_label"] <- ifelse(QDC_vs[[final_actor_colname]]=="D'Alembert (1753)"| QDC_vs[[final_actor_colname]]=="La Chalotais (1763)"| QDC_vs[[final_actor_colname]]=="Rousseau (1762)", QDC_vs[[final_actor_colname]], "")
+  QDC_vs[,"Corpus_num"] <- node_attr_df$Corpus_num[match(unlist(QDC_vs[[final_actor_colname]]), node_attr_df$Text_Name)]
+  return(QDC_vs)
+}
 
 
 
@@ -581,6 +625,11 @@ plot.igraph(QDC_pers2_net_1784, vertex.size=2, vertex.label.dist=0.4, edge.curve
 ##### ____Network Dynamic Object - Person-based network #####
 
 # Create vertex spell
+
+QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
+                               actor_colname = "ACTOR-PERSON", final_actor_colname = "Actor_pers",
+                               alter_colname = "TIE-PERSON")
+
 # First main QDC actors
 
 QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
@@ -1148,40 +1197,9 @@ render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
 # Create vertex spell
 ## First, QDC actors
 
-QDC_text_62_89 <- QDC_62_89[QDC_62_89$Date>1761 & QDC_62_89$Date<1790,]
-if (slice_or_year == "slice")  {
-  QDC_text_62_89 <- turn_years_into_slices(df = QDC_text_62_89, actor_colname = "ACTOR-TEXT", year_colname = "Date",
-                                           order_colname = "order", round = TRUE)
-  # Or Set onset manually for testing
-  #QDC_text_62_89$Date <- QDC_text_62_89$Date*10
-}
-QDC_text_62_89 <- QDC_text_62_89[,c("ACTOR-TEXT","TIE-TEXT","Date", "order")]
-QDC_text_62_89_inversed <- QDC_text_62_89[,c("TIE-TEXT","ACTOR-TEXT","Date", "order")]
-colnames(QDC_text_62_89_inversed) <- colnames(QDC_text_62_89)
-
-# Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
-
-QDC_pre_62_nodes <- QDC[QDC$Date<1762,]
-QDC_pre_62_nodes <- subset(QDC_pre_62_nodes, select=c("ACTOR-TEXT", "TIE-TEXT", "Date", "order"))
-QDC_pre_62_nodes <- QDC_pre_62_nodes[!is.na(QDC_pre_62_nodes$`ACTOR-TEXT`),]
-
-if (slice_or_year == "slice") {
-  QDC_pre_62_nodes$Date <- QDC_pre_62_nodes$Date*10
-}
-
-QDC_text_all <- rbind(QDC_pre_62_nodes, QDC_text_62_89, QDC_text_62_89_inversed)
-QDC_vs <- unique(QDC_text_all[, c("ACTOR-TEXT", "Date", "order")])
-QDC_vs <- QDC_vs[!is.na(QDC_vs$`ACTOR-TEXT`),]
-QDC_vs <- QDC_vs[order(QDC_vs$Date, QDC_vs$order),]
-QDC_vs <- QDC_vs[!duplicated(QDC_vs$`ACTOR-TEXT`),]
-colnames(QDC_vs) <- c("Actor_text", "onset","order_of_entry")
-QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
-QDC_vs[,"terminus"] <- (max(QDC_vs$onset)+1) # set maximum to year/slice + 1 - in most live uses, this should return 1790/17900 
-QDC_vs[, "Actor_code"] <- 1:nrow(QDC_vs)
-QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code","Actor_text", "order_of_entry")]
-QDC_vs$Actor_text <- as.character(QDC_vs$Actor_text)
-QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_text=="D'Alembert (1753)"| QDC_vs$Actor_text=="La Chalotais (1763)"| QDC_vs$Actor_text=="Rousseau (1762)", QDC_vs$Actor_text, "")
-QDC_vs[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_vs$Actor_text), QDC_text_nodes$Text_Name)]
+QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
+                               actor_colname = "ACTOR-TEXT", final_actor_colname = "Actor_text",
+                               alter_colname = "TIE-TEXT")
 
 ## Create edge spell
 
@@ -1389,7 +1407,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17890
+end <- 17899
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1401,11 +1419,11 @@ QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end
 QDC_text_anim2 <- QDC_text_dyn
 
 for (i in seq(from = start,to = end, by=1)) {
-  activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/4)
+  activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/3.5)
 }
 
 for (i in seq(from = start,to = end, by=1)) {
-  activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/4)
+  activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/3.5)
 }
 
 ## Recreating the network with new process (as of 2024-02-17)
