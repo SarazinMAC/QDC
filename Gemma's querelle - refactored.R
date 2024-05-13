@@ -679,6 +679,11 @@ QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
 #QDC_vs <- QDC_vs[order(QDC_vs$onset),]
 #QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "") # This is no longer needed
 
+QDC_for_pers_dyn <- QDC
+QDC_for_pers_dyn$`TIE-TEXT`[
+  is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] <- QDC_for_pers_dyn$`TIE-PERSON`[
+    is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] 
+
 ## Create edge spell
 ## This is tricky: If I just copy and paste, without meaningful modification, the QDC_text procedure, then all ties of an actor in a given period will just enter at once, at the first time point. This makes no sense.
 ## Instead, the solution is to construct the edge spell for QDC_text, and then match the actor/tie texts with the corresponding persons.
@@ -728,29 +733,13 @@ QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "char
 # Second, pre-QdC texts, with edge dates remaining pre-62
 # NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
 # Similarly, in network stats, their edge onsets should be set to that value
-# TODO: turn this into a custom function
 
-QDC_pre_62 <- QDC[QDC$Date<1762,]
-QDC_pre_62$`TIE-TEXT`[is.na(QDC_pre_62$`TIE-TEXT`) & !(is.na(QDC_pre_62$`TIE-PERSON`))] <- QDC_pre_62$`TIE-PERSON`[is.na(QDC_pre_62$`TIE-TEXT`) & !(is.na(QDC_pre_62$`TIE-PERSON`))] 
-QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
-
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-TEXT`),]
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`TIE-TEXT`),]
-
-# negative 'Quality' values screw with the network package. Let's just make all Quality values positive
-QDC_pre_62$Quality <- QDC_pre_62$Quality + 3
-QDC_pre_62$Quality[QDC_pre_62$Quality>6] <- QDC_pre_62$Quality[QDC_pre_62$Quality>6]-1
-
-# Set edge colours here as pre-QdC edges have different colours to QdC edges
-
-transparent_red <- "lightcoral"
-transparent_green <- "palegreen"
-transparent_orange <- "lightsalmon"
-QDC_pre_62$Qual_col <- c(transparent_red, transparent_red, "grey90", transparent_green, transparent_green, transparent_orange, "grey90", "grey90", "gray90")[QDC_pre_62$Quality]
+QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC_for_pers_dyn,
+                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT")
 
 # Now, merge the various datasets and create dynamic edge attributes
 
-QDC_text_for_pers_net <- rbind(QDC_pre_62, QDC_text_for_pers_net)
+QDC_text_for_pers_net <- rbind(QDC_pre_62_edges, QDC_text_for_pers_net)
 
 QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
 QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
