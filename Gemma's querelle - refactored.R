@@ -136,9 +136,12 @@ create_vertex_spells <- function(main_df, node_attr_df,
   QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code",final_actor_colname, "order_of_entry")]
   QDC_vs[[final_actor_colname]] <- as.character(QDC_vs[[final_actor_colname]])
   #QDC_vs[, "Actor_label"] <- ifelse(QDC_vs[[final_actor_colname]]=="D'Alembert (1753)"| QDC_vs[[final_actor_colname]]=="La Chalotais (1763)"| QDC_vs[[final_actor_colname]]=="Rousseau (1762)", QDC_vs[[final_actor_colname]], "")
+  #TODO: fix this line which doesn't work when used with person actor colnames.
   QDC_vs[,"Corpus_num"] <- node_attr_df$Corpus_num[match(unlist(QDC_vs[[final_actor_colname]]), node_attr_df$Text_Name)]
   return(QDC_vs)
 }
+
+# Custom function for extracting pre QDC edges
 
 extract_pre_qdc_edges <- function(main_df, actor_colname, alter_colname, start_year = 1762) {
   
@@ -161,6 +164,43 @@ extract_pre_qdc_edges <- function(main_df, actor_colname, alter_colname, start_y
   QDC_pre_62_edges$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62_edges$Quality]
   return(QDC_pre_62_edges)
 }
+
+# Custom function for creating QDC_es DVs and re-ordering/changing colnames of QDC_es
+
+QDC_es_transforms <- function(es_df, vs_df, actor_colname, alter_colname, vs_actor_colname) {
+  
+  # Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
+  es_df$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[es_df$Quality]
+  
+  # Create DVs
+  es_df[,"terminus"] <- unique(vs_df$terminus)
+  es_df[, "Actor_code"] <- vs_df$Actor_code[match(unlist(es_df[[actor_colname]]), vs_df[[vs_actor_colname]])]
+  es_df[, "Tie_code"] <- vs_df$Actor_code[match(unlist(es_df[[alter_colname]]), vs_df[[vs_actor_colname]])]
+  es_df[, "Actor_Corpus_num"] <- vs_df$Corpus_num[match(unlist(es_df$Actor_code), vs_df$Actor_code)]
+  es_df[, "Tie_Corpus_num"] <- vs_df$Corpus_num[match(unlist(es_df$Tie_code), vs_df$Actor_code)]
+  es_df[, "Tie_name"] <- paste0(es_df$Actor_Corpus_num, " &#8594 ", es_df$Tie_Corpus_num) # Note 07.08.2022: this attribute doesn't have a purpose yet, but it may do one day.
+  
+  ## Create dynamic edge attribute: Is edge sent to Rousseau?
+  
+  rousseau_codes <- vs_df$Actor_code[grepl("Rousseau", vs_df[[vs_actor_colname]])] # note that I have given the object a plural name but am only expecting a single Rousseau code
+  es_df$sent_to_rousseau <- (es_df$Tie_code %in% rousseau_codes)*1
+  rm(rousseau_codes)
+  
+  # Change column order and Date column name
+  es_df <- es_df[,c("Date","terminus","Actor_code","Tie_code", actor_colname, alter_colname, "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
+  colnames(es_df)[colnames(es_df)=="Date"] <- "onset"
+  
+  # Update es_df onsets with vs_df onsets
+  
+  es_df$onset <- vs_df$onset[match(unlist(es_df$Actor_code), vs_df$Actor_code)]
+  return(es_df)
+}
+
+
+
+
+
+
 
 
 # Clean dataset of empty rows
@@ -1229,33 +1269,11 @@ QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC,
 # now, merge both
 
 QDC_es <- rbind(QDC_pre_62_edges, QDC_text_62_89)
-
-# Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
-QDC_es$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es$Quality]
-
-# Create DVs
-QDC_es[,"terminus"] <- unique(QDC_vs$terminus)
-QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
-QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
-QDC_es[, "Actor_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
-QDC_es[, "Tie_Corpus_num"] <- QDC_vs$Corpus_num[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_text)]
-QDC_es[, "Tie_name"] <- paste0(QDC_es$Actor_Corpus_num, " &#8594 ", QDC_es$Tie_Corpus_num) # Note 07.08.2022: this attribute doesn't have a purpose yet, but it may do one day.
-
-## Create dynamic edge attribute: Is edge sent to Rousseau?
-
-rousseau_codes <- QDC_vs$Actor_code[grepl("Rousseau", QDC_vs$Actor_text)] # note that I have given the object a plural name but am only expecting a single Rousseau code
-QDC_es$sent_to_rousseau <- (QDC_es$Tie_code %in% rousseau_codes)*1
-rm(rousseau_codes)
-
-# Change column order and Date column name
-QDC_es <- QDC_es[,c("Date","terminus","Actor_code","Tie_code", "ACTOR-TEXT", "TIE-TEXT", "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
-colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
 rm(QDC_text_62_89)
 
-# Update QDC_es onsets with QDC_vs onsets
-
-QDC_es$onset <- QDC_vs$onset[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_text)]
-
+QDC_es <- QDC_es_transforms(es_df = QDC_es, vs_df = QDC_vs,
+                            actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
+                            vs_actor_colname = "Actor_text")
 
 ## Create network dynamic object
 
