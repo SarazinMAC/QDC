@@ -13,7 +13,7 @@ library(networkDynamic)
 
 # Configurable values
 
-Data_name <- "QDC_2024_04_28.xlsx"
+Data_name <- "QDC_2024_05_13.xlsx"
 Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
@@ -143,11 +143,15 @@ create_vertex_spells <- function(main_df, node_attr_df,
 
 # Custom function for extracting pre QDC edges
 
-extract_pre_qdc_edges <- function(main_df, actor_colname, alter_colname, start_year = 1762) {
+extract_pre_qdc_edges <- function(main_df, start_year = 1762,
+                                  actor_colname, alter_colname, order_colname = NULL) {
   
   QDC_pre_62_edges <- main_df[main_df$Date<1762,]
-  QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c(actor_colname, alter_colname, "Quality", "Date"))
-  
+  if (!is.null(order_colname)) {
+    QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c(actor_colname, alter_colname, "Quality", "Date", order_colname))
+  } else {
+    QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c(actor_colname, alter_colname, "Quality", "Date"))
+  }
   QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges[[actor_colname]]),]
   QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges[[alter_colname]]),]
   
@@ -165,9 +169,13 @@ extract_pre_qdc_edges <- function(main_df, actor_colname, alter_colname, start_y
   return(QDC_pre_62_edges)
 }
 
+
+
+
 # Custom function for creating QDC_es DVs and re-ordering/changing colnames of QDC_es
 
-QDC_es_transforms <- function(es_df, vs_df, actor_colname, alter_colname, vs_actor_colname) {
+QDC_es_transforms <- function(es_df, vs_df, 
+                              actor_colname, alter_colname, vs_actor_colname, order_colname = NULL) {
   
   # Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
   es_df$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[es_df$Quality]
@@ -187,7 +195,11 @@ QDC_es_transforms <- function(es_df, vs_df, actor_colname, alter_colname, vs_act
   rm(rousseau_codes)
   
   # Change column order and Date column name
-  es_df <- es_df[,c("Date","terminus","Actor_code","Tie_code", actor_colname, alter_colname, "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
+  if (!is.null(order_colname)) {
+    es_df <- es_df[,c("Date","terminus","Actor_code","Tie_code", actor_colname, alter_colname, "Quality", "Tie_name", "Qual_col", "sent_to_rousseau", order_colname)]
+  } else {
+    es_df <- es_df[,c("Date","terminus","Actor_code","Tie_code", actor_colname, alter_colname, "Quality", "Tie_name", "Qual_col", "sent_to_rousseau")]
+  }
   colnames(es_df)[colnames(es_df)=="Date"] <- "onset"
   
   # Update es_df onsets with vs_df onsets
@@ -738,7 +750,7 @@ QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
 
 QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
-QDC_text_for_pers_net$order=NULL
+#QDC_text_for_pers_net$order=NULL
 
 QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
@@ -747,7 +759,8 @@ QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "char
 # Similarly, in network stats, their edge onsets should be set to that value
 
 QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC_for_pers_dyn,
-                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT")
+                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
+                                          order_colname = "order")
 
 # Now, merge the various datasets and create dynamic edge attributes
 
@@ -761,7 +774,7 @@ QDC_vs_text_dyn <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_n
 
 QDC_es <- QDC_es_transforms(es_df = QDC_text_for_pers_net, vs_df = QDC_vs_text_dyn,
                             actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
-                            vs_actor_colname = "Actor_text")
+                            vs_actor_colname = "Actor_text", order_colname = "order")
 
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
@@ -799,12 +812,13 @@ QDC_es$`TIE-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), x$`ACTOR-
 QDC_es$`ACTOR-TEXT` <- x$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), x$`ACTOR-TEXT`)]
 QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
 QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col")]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "order")]
 rm(x)
 
 ## The following is just to remove ambiguity with variable names
 
-colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
+colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
+colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
 
 
 
@@ -857,6 +871,7 @@ QDC_pers_dyn %v% "vertex.names" <- QDC_pers_attr_dyn$Pers_Name
 
 QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
 #TODO: Fix the presence of NAs in this attribute
+
 
 ##### CORRIGER les accents etc.
 
