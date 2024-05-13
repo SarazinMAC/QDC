@@ -695,7 +695,14 @@ colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
 QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
 
 QDC_text_resp[,"Quality"] <- 9
-#QDC_text_resp[,"Line_type"] <- "dashed" #Not needed for dynamic vis
+
+QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
+rm(QDC_text_resp_2, QDC_text_resp)
+
+QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
+QDC_text_for_pers_net$order=NULL
+
+QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
 # Second, pre-QdC texts, with edge dates remaining pre-62
 # NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
@@ -721,15 +728,6 @@ transparent_orange <- "lightsalmon"
 QDC_pre_62$Qual_col <- c(transparent_red, transparent_red, "grey90", transparent_green, transparent_green, transparent_orange, "grey90", "grey90", "gray90")[QDC_pre_62$Quality]
 
 # Now, merge the various datasets and create dynamic edge attributes
-# NOTE: still have to figure out how to make dynamic edge attributes change based on edge toggles
-# First combine responses and normal ties, then set edge colour, and attach pre-62 edges
-QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
-rm(QDC_text_resp_2, QDC_text_resp)
-
-QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
-QDC_text_for_pers_net$order=NULL
-
-QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
 QDC_text_for_pers_net <- rbind(QDC_pre_62, QDC_text_for_pers_net)
 
