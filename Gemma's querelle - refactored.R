@@ -691,34 +691,6 @@ QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
                                actor_colname = "ACTOR-PERSON", final_actor_colname = "Actor_pers",
                                alter_colname = "TIE-PERSON")
 
-## First main QDC actors
-#
-#QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
-#QDC_pers_62_89 <- QDC_pers_62_89[,c("ACTOR-PERSON","TIE-PERSON","Date")]
-#QDC_pers_62_89_inversed <- QDC_pers_62_89[,c("TIE-PERSON","ACTOR-PERSON","Date")]
-#colnames(QDC_pers_62_89_inversed) <- colnames(QDC_pers_62_89)
-#
-## Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
-#
-#QDC_pre_62 <- QDC[QDC$Date<1762,]
-#QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-PERSON", "TIE-PERSON", "Date"))
-#QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-PERSON`),]
-#
-#QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_62_89, QDC_pers_62_89_inversed)
-#QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
-#QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
-#QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
-#QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
-#QDC_vs <- QDC_vs[,1:2]
-#colnames(QDC_vs) <- c("Actor_pers", "onset")
-#QDC_vs[,"terminus"] <- 1790
-#QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
-#QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_pers)
-#QDC_vs <- QDC_vs[,c(2,3,4,1)]
-#QDC_vs$Actor_pers <- as.character(QDC_vs$Actor_pers)
-#QDC_vs <- QDC_vs[order(QDC_vs$onset),]
-#QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "") # This is no longer needed
-
 QDC_for_pers_dyn <- QDC
 QDC_for_pers_dyn$`TIE-TEXT`[
   is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] <- QDC_for_pers_dyn$`TIE-PERSON`[
@@ -790,61 +762,6 @@ QDC_es <- QDC_es_transforms(es_df = QDC_text_for_pers_net, vs_df = QDC_vs_text_d
                             vs_actor_colname = "Actor_text")
 
 # TODO: check whether empty Tie_code here is an issue later on
-
-#QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
-#QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
-#QDC_text_for_pers_net[, "Tie_name"] <- paste0(QDC_text_for_pers_net$Actor_Corpus_num, " &#8594 ", QDC_text_for_pers_net$Tie_Corpus_num)
-#
-#
-#
-#QDC_es <- QDC_text_for_pers_net
-#QDC_es[,"terminus"] <- 1790
-#QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col")]
-#colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
-#QDC_es$onset_year <- QDC_es$onset
-#rm(QDC_text_for_pers_net)
-#
-## Compute within-year slices; if slices and not years are used
-#
-#if (slice_or_year == "slice") {
-#  ### Split onset times in each year
-#  ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
-#  
-#  es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
-#  es_year_splits <- unique(es_year_splits)
-#  es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
-#  
-#  w <- table(es_year_splits$onset)
-#  
-#  # Note: these latter two variables will be used for the edge
-#  
-#  for (i in (1762:1789)) {
-#    if (i %in% names(w)) {
-#      year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-#      es_year_splits$onset[es_year_splits$onset==i] <- year_slices
-#    } else {
-#      next
-#    }
-#  }
-#  
-#  
-#  
-#  
-#  
-#  ### Fixing the slider of ndtv: including no decimal points.
-#  #Standard solution: round to one decimal point and Multiply all years by 10 
-#  
-#  es_year_splits$onset <- trunc(es_year_splits$onset*10)
-#  
-#  ## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
-#  QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
-#  
-#  QDC_es[,"terminus"] <- 17900
-#  QDC_vs[,"terminus"] <- 17900
-#  
-#  rm(es_year_splits)
-#}
-
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
 ## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. 
