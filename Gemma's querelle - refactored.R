@@ -781,59 +781,69 @@ QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC_for_pers_dyn,
 
 QDC_text_for_pers_net <- rbind(QDC_pre_62_edges, QDC_text_for_pers_net)
 
-QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text_for_pers_net[, "Tie_name"] <- paste0(QDC_text_for_pers_net$Actor_Corpus_num, " &#8594 ", QDC_text_for_pers_net$Tie_Corpus_num)
+QDC_vs_text_dyn <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
+                               actor_colname = "ACTOR-TEXT", final_actor_colname = "Actor_text",
+                               alter_colname = "TIE-TEXT")
 
+QDC_es <- QDC_es_transforms(es_df = QDC_text_for_pers_net, vs_df = QDC_vs_text_dyn,
+                            actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
+                            vs_actor_colname = "Actor_text")
 
+# TODO: check whether empty Tie_code here is an issue later on
 
-QDC_es <- QDC_text_for_pers_net
-QDC_es[,"terminus"] <- 1790
-QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col")]
-colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
-QDC_es$onset_year <- QDC_es$onset
-rm(QDC_text_for_pers_net)
-
-# Compute within-year slices; if slices and not years are used
-
-if (slice_or_year == "slice") {
-  ### Split onset times in each year
-  ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
-  
-  es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
-  es_year_splits <- unique(es_year_splits)
-  es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
-  
-  w <- table(es_year_splits$onset)
-  
-  # Note: these latter two variables will be used for the edge
-  
-  for (i in (1762:1789)) {
-    if (i %in% names(w)) {
-      year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
-      es_year_splits$onset[es_year_splits$onset==i] <- year_slices
-    } else {
-      next
-    }
-  }
-  
-  
-  
-  
-  
-  ### Fixing the slider of ndtv: including no decimal points.
-  #Standard solution: round to one decimal point and Multiply all years by 10 
-  
-  es_year_splits$onset <- trunc(es_year_splits$onset*10)
-  
-  ## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
-  QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
-  
-  QDC_es[,"terminus"] <- 17900
-  QDC_vs[,"terminus"] <- 17900
-  
-  rm(es_year_splits)
-}
+#QDC_text_for_pers_net[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
+#QDC_text_for_pers_net[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_for_pers_net$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
+#QDC_text_for_pers_net[, "Tie_name"] <- paste0(QDC_text_for_pers_net$Actor_Corpus_num, " &#8594 ", QDC_text_for_pers_net$Tie_Corpus_num)
+#
+#
+#
+#QDC_es <- QDC_text_for_pers_net
+#QDC_es[,"terminus"] <- 1790
+#QDC_es <- QDC_es[,c("Date","terminus","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col")]
+#colnames(QDC_es)[colnames(QDC_es)=="Date"] <- "onset"
+#QDC_es$onset_year <- QDC_es$onset
+#rm(QDC_text_for_pers_net)
+#
+## Compute within-year slices; if slices and not years are used
+#
+#if (slice_or_year == "slice") {
+#  ### Split onset times in each year
+#  ## First need to figure when each sending text and receiving text (i.e. each tie) come in for the first time
+#  
+#  es_year_splits <- QDC_es[,c("ACTOR-TEXT", "onset")] # NOTE: This is correct procedure IF database is in right order
+#  es_year_splits <- unique(es_year_splits)
+#  es_year_splits$onset <- as.numeric(as.character(es_year_splits$onset))
+#  
+#  w <- table(es_year_splits$onset)
+#  
+#  # Note: these latter two variables will be used for the edge
+#  
+#  for (i in (1762:1789)) {
+#    if (i %in% names(w)) {
+#      year_slices <- seq(from = i, to = i + (1 - (1/w[rownames(w)==i])), length.out = w[rownames(w)==i])
+#      es_year_splits$onset[es_year_splits$onset==i] <- year_slices
+#    } else {
+#      next
+#    }
+#  }
+#  
+#  
+#  
+#  
+#  
+#  ### Fixing the slider of ndtv: including no decimal points.
+#  #Standard solution: round to one decimal point and Multiply all years by 10 
+#  
+#  es_year_splits$onset <- trunc(es_year_splits$onset*10)
+#  
+#  ## NOTE: If there are multiple ties between the same texts (in the same direction), then they will currently all receive the earliest onset value with the code just below.
+#  QDC_es$onset <- es_year_splits$onset[match(unlist(QDC_es$`ACTOR-TEXT`), es_year_splits$`ACTOR-TEXT`)]
+#  
+#  QDC_es[,"terminus"] <- 17900
+#  QDC_vs[,"terminus"] <- 17900
+#  
+#  rm(es_year_splits)
+#}
 
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
