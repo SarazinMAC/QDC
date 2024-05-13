@@ -630,32 +630,32 @@ QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
                                actor_colname = "ACTOR-PERSON", final_actor_colname = "Actor_pers",
                                alter_colname = "TIE-PERSON")
 
-# First main QDC actors
-
-QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
-QDC_pers_62_89 <- QDC_pers_62_89[,c("ACTOR-PERSON","TIE-PERSON","Date")]
-QDC_pers_62_89_inversed <- QDC_pers_62_89[,c("TIE-PERSON","ACTOR-PERSON","Date")]
-colnames(QDC_pers_62_89_inversed) <- colnames(QDC_pers_62_89)
-
-# Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
-
-QDC_pre_62 <- QDC[QDC$Date<1762,]
-QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-PERSON", "TIE-PERSON", "Date"))
-QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-PERSON`),]
-
-QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_62_89, QDC_pers_62_89_inversed)
-QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
-QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
-QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
-QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
-QDC_vs <- QDC_vs[,1:2]
-colnames(QDC_vs) <- c("Actor_pers", "onset")
-QDC_vs[,"terminus"] <- 1790
-QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
-QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_pers)
-QDC_vs <- QDC_vs[,c(2,3,4,1)]
-QDC_vs$Actor_pers <- as.character(QDC_vs$Actor_pers)
-QDC_vs <- QDC_vs[order(QDC_vs$onset),]
+## First main QDC actors
+#
+#QDC_pers_62_89 <- QDC_pers[QDC_pers$Date>1761 & QDC_pers$Date<1790,]
+#QDC_pers_62_89 <- QDC_pers_62_89[,c("ACTOR-PERSON","TIE-PERSON","Date")]
+#QDC_pers_62_89_inversed <- QDC_pers_62_89[,c("TIE-PERSON","ACTOR-PERSON","Date")]
+#colnames(QDC_pers_62_89_inversed) <- colnames(QDC_pers_62_89)
+#
+## Second, pre-QDC actors (whose vertex onsets (Dates) should now remain pre-1762)
+#
+#QDC_pre_62 <- QDC[QDC$Date<1762,]
+#QDC_pre_62 <- subset(QDC_pre_62, select=c("ACTOR-PERSON", "TIE-PERSON", "Date"))
+#QDC_pre_62 <- QDC_pre_62[!is.na(QDC_pre_62$`ACTOR-PERSON`),]
+#
+#QDC_pers_all <- rbind(QDC_pre_62, QDC_pers_62_89, QDC_pers_62_89_inversed)
+#QDC_vs <- as.data.frame(table(QDC_pers_all$`ACTOR-PERSON`, QDC_pers_all$Date))
+#QDC_vs <- QDC_vs[QDC_vs$Freq>0,]
+#QDC_vs <- QDC_vs[order(QDC_vs$Var1,QDC_vs$Var2),]
+#QDC_vs <- QDC_vs[!duplicated(QDC_vs$Var1),]
+#QDC_vs <- QDC_vs[,1:2]
+#colnames(QDC_vs) <- c("Actor_pers", "onset")
+#QDC_vs[,"terminus"] <- 1790
+#QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
+#QDC_vs[, "Actor_code"] <- as.numeric(QDC_vs$Actor_pers)
+#QDC_vs <- QDC_vs[,c(2,3,4,1)]
+#QDC_vs$Actor_pers <- as.character(QDC_vs$Actor_pers)
+#QDC_vs <- QDC_vs[order(QDC_vs$onset),]
 #QDC_vs[, "Actor_label"] <- ifelse(QDC_vs$Actor_pers=="D'Alembert"| QDC_vs$Actor_pers=="La Chalotais"| QDC_vs$Actor_pers=="Rousseau", QDC_vs$Actor_pers, "") # This is no longer needed
 
 ## Create edge spell
@@ -789,7 +789,8 @@ if (slice_or_year == "slice") {
 
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
-## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. To do that, just rbind a file with actor-persons in both the actor-text and actor-person columns
+## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. 
+## To do that, just rbind a file with actor-persons in both the actor-text and actor-person columns
 
 x <- as.data.frame(table(QDC$`ACTOR-TEXT`, QDC$`ACTOR-PERSON`))
 x <- x[x$Freq>0,1:2]
