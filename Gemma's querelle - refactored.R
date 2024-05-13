@@ -178,7 +178,7 @@ QDC_es_transforms <- function(es_df, vs_df,
                               actor_colname, alter_colname, vs_actor_colname, order_colname = NULL) {
   
   # Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
-  es_df$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[es_df$Quality]
+#  es_df$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[es_df$Quality]
   
   # Create DVs
   es_df[,"terminus"] <- unique(vs_df$terminus)
@@ -209,7 +209,19 @@ QDC_es_transforms <- function(es_df, vs_df,
 }
 
 
+# Create object to store static vertex attributes for dynamic net
 
+create_static_vertex_attr_df <- function(vs_df, node_attr_df) {
+  # re-creating a temporary order variable in vs_df in case the existing order variable is not in order
+  vs_df$order <- 1:nrow(vs_df)
+  node_attr_df$node_order_dynamic_vis <- vs_df$order[match(
+    unlist(node_attr_df$Text_Name), vs_df$Actor_text)]
+  node_attr_df$order_of_entry <- vs_df$order_of_entry[match(
+    unlist(node_attr_df$Text_Name), vs_df$Actor_text)]
+  
+  QDC_static_attr_dyn <- node_attr_df[order(node_attr_df$node_order_dynamic_vis),]
+  return(QDC_static_attr_dyn)
+}
 
 
 
@@ -1195,6 +1207,12 @@ QDC_es <- QDC_es_transforms(es_df = QDC_es, vs_df = QDC_vs,
                             actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
                             vs_actor_colname = "Actor_text")
 
+# Also transform QDC_pre_62_edges to create colour changes
+
+QDC_pre_62_edges <- QDC_es_transforms(es_df = QDC_pre_62_edges, vs_df = QDC_vs,
+                            actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
+                            vs_actor_colname = "Actor_text")
+
 ## Create network dynamic object
 
 # Standard version (with no changes in colour etc.)
@@ -1206,9 +1224,9 @@ QDC_vs_dynamic_vis <- QDC_vs
 
 QDC_es_dynamic_vis <- QDC_es
 
+QDC_es_dynamic_vis$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es_dynamic_vis$Quality]
+
 if (slice_or_year == "slice") {
-  QDC_es_pre_62 <- QDC_es_dynamic_vis[QDC_es_dynamic_vis$onset<17620,]
-  QDC_es_pre_62$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_es_pre_62$Quality]
   start_slice <- 17620
 } else if (slice_or_year == "year") {
   start_slice <- 1762
@@ -1216,7 +1234,7 @@ if (slice_or_year == "slice") {
 
 QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vis, .start_slice = start_slice)
 
-QDC_es_dynamic_vis <- rbind(QDC_es_pre_62, QDC_es_dynamic_vis)
+QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
 
 QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.spells = QDC_es_dynamic_vis[,c(1:4, 9)], create.TEAs = TRUE)
 
@@ -1227,21 +1245,16 @@ QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.sp
 
 ## Define vertex and edge attributes
 
-# vertex attributes
-# re-creating a temporary order variable in QDC_vs_dynamic_vis in case the existing order variable is not in order
-QDC_vs_dynamic_vis$order <- 1:nrow(QDC_vs_dynamic_vis)
-QDC_text_nodes$node_order_dynamic_vis <- QDC_vs_dynamic_vis$order[match(
-  unlist(QDC_text_nodes$Text_Name), QDC_vs_dynamic_vis$Actor_text)]
-QDC_text_nodes$order_of_entry <- QDC_vs_dynamic_vis$order_of_entry[match(
-  unlist(QDC_text_nodes$Text_Name), QDC_vs_dynamic_vis$Actor_text)]
+# static vertex attributes
 
-QDC_text_attr_dyn <- QDC_text_nodes[order(QDC_text_nodes$node_order_dynamic_vis),]
+QDC_text_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs_dynamic_vis, 
+                                                  node_attr_df = QDC_text_nodes)
 
 for (col in colnames(QDC_text_attr_dyn)) {
   QDC_text_dyn %v% col <- QDC_text_attr_dyn[[col]]
 }
 
-# Now to add changing vertex colours as dynamic vertex attribute
+# dynamic vertex attribute
 # Colour for pre-QdC people: #bcddfb
 # colour for pre-QDC institutions: #f5a4db
 # There are no pre-QdC periodicals, so keep gold for them.
