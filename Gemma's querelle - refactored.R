@@ -757,11 +757,12 @@ QDC_vs_text_dyn <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_n
                                actor_colname = "ACTOR-TEXT", final_actor_colname = "Actor_text",
                                alter_colname = "TIE-TEXT")
 
+# TODO: check whether empty Tie_code here is an issue later on
+
 QDC_es <- QDC_es_transforms(es_df = QDC_text_for_pers_net, vs_df = QDC_vs_text_dyn,
                             actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
                             vs_actor_colname = "Actor_text")
 
-# TODO: check whether empty Tie_code here is an issue later on
 
 ## NOW turn actor-texts into person-texts - Note: this could be simplified if I just used a node attribute file that combined texts with persons
 ## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. 
@@ -800,29 +801,6 @@ QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), Q
 QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
 QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col")]
 rm(x)
-## Now to replace dates in QDC_vs with new dates from QDC_es, need to give QDC_vs date the earliest date values that you find in QDC_es
-## This means looking at when actors appear both in the actor and tie columns in QDC_es, and taking the earliest of all of those dates
-
-x <- as.data.frame(table(QDC_es$Actor_code, QDC_es$onset))
-x <- x[x$Freq>0, 1:2]
-xx <- as.data.frame(table(QDC_es$Tie_code, QDC_es$onset))
-xx <- xx[xx$Freq>0, 1:2] #Note: This should be the same dimension as data.frame(QDC_es$Tie_code, QDC_es$onset), since each tie is given its unique onset  
-x <- rbind(x, xx)
-colnames(x) <- c("Actor_code", "onset")
-x$onset <- as.numeric(as.character(x$onset))
-x$Actor_code <- as.numeric(as.character(x$Actor_code))
-rm(xx)
-
-## order & remove duplicated in x
-
-w <- x[with(x, order(Actor_code, onset)),]
-w <- w[!(duplicated(w$Actor_code)),]
-
-## Using matching, replace Dates in QDC_vs
-
-QDC_vs$onset <- w$onset[match(unlist(QDC_vs$Actor_code), w$Actor_code)]
-
-rm(w, x)
 
 ## The following is just to remove ambiguity with variable names
 
