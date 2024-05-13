@@ -140,6 +140,27 @@ create_vertex_spells <- function(main_df, node_attr_df,
   return(QDC_vs)
 }
 
+extract_pre_qdc_edges <- function(main_df, actor_colname, alter_colname, start_year = 1762) {
+  
+  QDC_pre_62_edges <- main_df[main_df$Date<1762,]
+  QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c(actor_colname, alter_colname, "Quality", "Date"))
+  
+  QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges[[actor_colname]]),]
+  QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges[[alter_colname]]),]
+  
+  # negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+  QDC_pre_62_edges$Quality <- QDC_pre_62_edges$Quality + 3
+  QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6] <- QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6]-1
+  
+  # Set edge colours here as pre-QdC edges have different colours to QdC edges
+  
+  pre_qdc_negative <- "grey90"
+  pre_qdc_positive <- "grey90"
+  pre_qdc_ambivalent <- "grey90"
+  pre_qdc_neutral <- "grey90"
+  QDC_pre_62_edges$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62_edges$Quality]
+  return(QDC_pre_62_edges)
+}
 
 
 # Clean dataset of empty rows
@@ -1213,23 +1234,8 @@ QDC_text_62_89$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3
 # NOTE: Edges for pre-QdC texts should change colour whenever they are first brought in during the QdC
 # Similarly, in network stats, their edge onsets should be set to that value
 
-QDC_pre_62_edges <- QDC[QDC$Date<1762,]
-QDC_pre_62_edges <- subset(QDC_pre_62_edges, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date"))
-
-QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges$`ACTOR-TEXT`),]
-QDC_pre_62_edges <- QDC_pre_62_edges[!is.na(QDC_pre_62_edges$`TIE-TEXT`),]
-
-# negative 'Quality' values screw with the network package. Let's just make all Quality values positive
-QDC_pre_62_edges$Quality <- QDC_pre_62_edges$Quality + 3
-QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6] <- QDC_pre_62_edges$Quality[QDC_pre_62_edges$Quality>6]-1
-
-# Set edge colours here as pre-QdC edges have different colours to QdC edges
-
-pre_qdc_negative <- "grey90"
-pre_qdc_positive <- "grey90"
-pre_qdc_ambivalent <- "grey90"
-pre_qdc_neutral <- "grey90"
-QDC_pre_62_edges$Qual_col <- c(pre_qdc_negative, pre_qdc_negative, pre_qdc_neutral, pre_qdc_positive, pre_qdc_positive, pre_qdc_ambivalent, pre_qdc_neutral, pre_qdc_neutral, pre_qdc_neutral)[QDC_pre_62_edges$Quality]
+QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC,
+                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT")
 
 # now, merge both
 
