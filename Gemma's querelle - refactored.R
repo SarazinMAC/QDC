@@ -224,6 +224,68 @@ create_static_vertex_attr_df <- function(vs_df, node_attr_df) {
 }
 
 
+# Create object to store dynamic vertex attributes
+
+create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, 
+                                      .slice_or_year = slice_or_year, .start_slice = start_slice) {
+  
+  # import relevant variables into vs_df
+  
+  vs_df$Actor_type <- attr_df$Actor_type[match(
+    unlist(vs_df$Actor_text), attr_df$Text_Name)]
+  
+  vs_df$Type_col <- attr_df$Type_col[match(
+    unlist(vs_df$Actor_text), attr_df$Text_Name)]
+  
+  # add pre-QdC colours to vs_df for pre-QdC nodes
+  
+  if (slice_or_year=="slice") {
+    pre_62_vs_df <- vs_df[vs_df$onset<17620,]
+  } else if (slice_or_year=="year") {
+    pre_62_vs_df <- vs_df[vs_df$onset<1762,]  
+  }
+  
+  # Colour for pre-QdC people: #bcddfb
+  # colour for pre-QDC institutions: #f5a4db
+  # There are no pre-QdC periodicals, so keep gold for them.
+  
+  pre_62_vs_df$vertex_colour <- c("#BCDDFB", "#F5A4DB", "gold")[pre_62_vs_df$Actor_type]
+  
+  # set onset (year/slice) at which pre-QdC nodes achieve their final colour
+  
+  es_reduced <- es_df[c("onset", "Actor_code", "Tie_code")]
+  es_reduced_inversed <- es_df[c("onset", "Tie_code", "Actor_code")]
+  es_reduced_inversed <- es_reduced_inversed[es_reduced_inversed$onset>=17620,]
+  colnames(es_reduced_inversed) <- colnames(es_reduced)
+  es_combined <- rbind(es_reduced, es_reduced_inversed)
+  
+  onset_of_change <- assign_pre_QDC_edge_onsets(edge_spells = es_combined, .start_slice = .start_slice)
+  
+  onset_of_change <- onset_of_change[onset_of_change$Actor_code %in% pre_62_vs_df$Actor_code,
+                                     c("onset", "Actor_code", "Tie_code")]
+  #onset_of_change_inversed <- onset_of_change[, c("onset", "Tie_code", "Actor_code")]
+  #colnames(onset_of_change_inversed) <- colnames(onset_of_change)
+  
+  #onset_of_change <- rbind(onset_of_change, onset_of_change_inversed) 
+  
+  onset_of_change <- onset_of_change[, c("Actor_code", "onset")]
+  onset_of_change <- unique(onset_of_change)
+  onset_of_change <- onset_of_change[order(onset_of_change$Actor_code, onset_of_change$onset),]
+  onset_of_change <- onset_of_change[!duplicated(onset_of_change$Actor_code),]
+  
+  vs_df$onset_of_change <- onset_of_change$onset[match(
+    unlist(vs_df$Actor_code), onset_of_change$Actor_code)]
+  
+  vs_df$onset[!is.na(vs_df$onset_of_change)] <- vs_df$onset_of_change[!is.na(vs_df$onset_of_change)]
+  vs_df$onset_of_change=NULL
+  
+  vs_df$vertex_colour <- vs_df$Type_col
+  vs_df <- rbind(pre_62_vs_df, vs_df)
+  vs_df <- vs_df[!duplicated(
+    vs_df[, c("onset", "Actor_code")]),]
+  return(vs_df)
+}
+
 
 
 
@@ -1255,70 +1317,9 @@ for (col in colnames(QDC_text_attr_dyn)) {
 }
 
 # dynamic vertex attribute
-# Colour for pre-QdC people: #bcddfb
-# colour for pre-QDC institutions: #f5a4db
-# There are no pre-QdC periodicals, so keep gold for them.
 
-# Create object to store dynamic vertex attributes
-
-create_dyn_vertex_attr_df <- function(vs_df, attr_df, 
-                                      .slice_or_year = slice_or_year)
-  
-QDC_vs_dynamic_vis_attr <- QDC_vs_dynamic_vis
-
-# import relevant variables into QDC_vs_dynamic_vis_attr
-
-QDC_vs_dynamic_vis_attr$Actor_type <- QDC_text_attr_dyn$Actor_type[match(
-  unlist(QDC_vs_dynamic_vis_attr$Actor_text), QDC_text_attr_dyn$Text_Name)]
-
-QDC_vs_dynamic_vis_attr$Type_col <- QDC_text_attr_dyn$Type_col[match(
-  unlist(QDC_vs_dynamic_vis_attr$Actor_text), QDC_text_attr_dyn$Text_Name)]
-
-# add pre-QdC colours to QDC_vs_dynamic_vis_attr for pre-QdC nodes
-
-if (slice_or_year=="slice") {
-  pre_62 <- QDC_vs_dynamic_vis_attr[QDC_vs_dynamic_vis_attr$onset<17620,]
-} else if (slice_or_year=="year") {
-  pre_62 <- QDC_vs_dynamic_vis_attr[QDC_vs_dynamic_vis_attr$onset<1762,]  
-}
-
-pre_62$vertex_colour <- c("#BCDDFB", "#F5A4DB", "gold")[pre_62$Actor_type]
-
-# set onset (year/slice) at which pre-QdC nodes achieve their final colour
-
-es_reduced <- QDC_es[c("onset", "Actor_code", "Tie_code")]
-es_reduced_inversed <- QDC_es[c("onset", "Tie_code", "Actor_code")]
-es_reduced_inversed <- es_reduced_inversed[es_reduced_inversed$onset>=17620,]
-colnames(es_reduced_inversed) <- colnames(es_reduced)
-es_combined <- rbind(es_reduced, es_reduced_inversed)
-  
-#onset_of_change <- rbind(
-#  QDC_es[, c("Actor_code", "Tie_code", "onset")], QDC_es[, c("Tie_code", "Actor_code", "onset")]
-#) 
-onset_of_change <- assign_pre_QDC_edge_onsets(edge_spells = es_combined, .start_slice = start_slice)
-
-onset_of_change <- onset_of_change[onset_of_change$Actor_code %in% pre_62$Actor_code,
-                                      c("onset", "Actor_code", "Tie_code")]
-#onset_of_change_inversed <- onset_of_change[, c("onset", "Tie_code", "Actor_code")]
-#colnames(onset_of_change_inversed) <- colnames(onset_of_change)
-
-#onset_of_change <- rbind(onset_of_change, onset_of_change_inversed) 
-
-onset_of_change <- onset_of_change[, c("Actor_code", "onset")]
-onset_of_change <- unique(onset_of_change)
-onset_of_change <- onset_of_change[order(onset_of_change$Actor_code, onset_of_change$onset),]
-onset_of_change <- onset_of_change[!duplicated(onset_of_change$Actor_code),]
-
-QDC_vs_dynamic_vis_attr$onset_of_change <- onset_of_change$onset[match(
-  unlist(QDC_vs_dynamic_vis_attr$Actor_code), onset_of_change$Actor_code)]
-
-QDC_vs_dynamic_vis_attr$onset[!is.na(QDC_vs_dynamic_vis_attr$onset_of_change)] <- QDC_vs_dynamic_vis_attr$onset_of_change[!is.na(QDC_vs_dynamic_vis_attr$onset_of_change)]
-QDC_vs_dynamic_vis_attr$onset_of_change=NULL
-
-QDC_vs_dynamic_vis_attr$vertex_colour <- QDC_vs_dynamic_vis_attr$Type_col
-QDC_vs_dynamic_vis_attr <- rbind(pre_62, QDC_vs_dynamic_vis_attr)
-QDC_vs_dynamic_vis_attr <- QDC_vs_dynamic_vis_attr[!duplicated(
-  QDC_vs_dynamic_vis_attr[, c("onset", "Actor_code")]),]
+QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis, es_df = QDC_es,
+                                                     attr_df = QDC_text_attr_dyn)
 
 # loop over vertex data to add the dynamic attributes on the vertices
 for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
@@ -1368,7 +1369,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17899
+end <- 17640
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1399,7 +1400,7 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_colours_refactored.html"
+filename <- "QDC_text_with_pre_QdC_colours_refactored_testing.html"
 
 render.d3movie(QDC_text_anim2,
 #render.d3movie(QDC_text_anim,
