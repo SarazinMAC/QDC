@@ -928,23 +928,77 @@ QDC_es$num=NULL
 #QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)µ
 #number_of_nodes <- length(unique(QDC_vs$Actor_code))
 
-# Try creating dummy net to instruct the network that it should have multiple edges
-#dummy_net <- network.initialize(number_of_nodes, multiple = TRUE)
-
 #QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
-QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c("onset", "terminus", "Actor_code", "Tie_code", "Quality", "Qual_col")], create.TEAs = TRUE, verbose = TRUE)
+#QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c("onset", "terminus", "Actor_code", "Tie_code", "Quality", "Qual_col")], create.TEAs = TRUE, verbose = TRUE)
+
+
+QDC_vs_dynamic_vis <- QDC_vs
+
+QDC_es_dynamic_vis <- QDC_es
+
+QDC_es_dynamic_vis$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es_dynamic_vis$Quality]
+
+if (slice_or_year == "slice") {
+  start_slice <- 17620
+} else if (slice_or_year == "year") {
+  start_slice <- 1762
+}
+
+QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vis, .start_slice = start_slice)
+
+QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
+
+QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.spells = QDC_es_dynamic_vis[,c(1:4, 9)], create.TEAs = TRUE)
+
 
 # vertex and edge attributes
+#
+#QDC_pers_attr_dyn <- QDC_pers_attr[order(QDC_pers_attr$Pers_Name),]
+#
+#for (col in colnames(QDC_pers_attr_dyn)) {
+#  QDC_pers_dyn %v% col <- QDC_pers_attr_dyn[[col]]
+#}
+#QDC_pers_dyn %v% "vertex.names" <- QDC_pers_attr_dyn$Pers_Name
+#
+#QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
+#TODO: Fix the presence of NAs in this attribute
 
-QDC_pers_attr_dyn <- QDC_pers_attr[order(QDC_pers_attr$Pers_Name),]
+# static vertex attributes
+
+QDC_pers_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs_dynamic_vis, 
+                                                  node_attr_df = QDC_pers_nodes)
 
 for (col in colnames(QDC_pers_attr_dyn)) {
   QDC_pers_dyn %v% col <- QDC_pers_attr_dyn[[col]]
 }
-QDC_pers_dyn %v% "vertex.names" <- QDC_pers_attr_dyn$Pers_Name
 
-QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
-#TODO: Fix the presence of NAs in this attribute
+# dynamic vertex attribute
+
+QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis, es_df = QDC_es,
+                                                     attr_df = QDC_pers_attr_dyn)
+
+# loop over vertex data to add the dynamic attributes on the vertices
+for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'vertex_colour',
+                            value = QDC_vs_dynamic_vis_attr$vertex_colour[row],
+                            onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
+                            v=QDC_vs_dynamic_vis_attr$Actor_code[row])
+  
+}
+
+
+# Add Dynamic edge attributes
+
+# loop over edge data to add the dynamic attributes on the edge
+for(row in 1:nrow(QDC_es_dynamic_vis)){
+  # get the id of the edge from its tail and head
+  edge_id <- get.edgeIDs(QDC_pers_dyn,v=QDC_es_dynamic_vis$Actor_code[row],
+                         alter=QDC_es_dynamic_vis$Tie_code[row])
+  activate.edge.attribute(QDC_pers_dyn,'edge_colour',QDC_es_dynamic_vis$Qual_col[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  activate.edge.attribute(QDC_pers_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+}
 
 
 ##### CORRIGER les accents etc.
@@ -967,7 +1021,7 @@ compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1,
 ## Normal way of doing it
 
 start <- 17619
-end <- 17899
+end <- 17640
 
 QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
