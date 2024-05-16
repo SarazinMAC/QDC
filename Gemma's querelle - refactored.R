@@ -1111,7 +1111,7 @@ QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
 
 # First, main QdC texts
 
-QDC_text_62_89 <- QDC_text[QDC_text$Date>1761 & QDC_text$Date<1790, c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date")]
+QDC_text_62_89 <- QDC_text[QDC_text$Date>1761 & QDC_text$Date<1790, c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "order")]
 # Set edge colours again - note the pre-QdC edge colours will be overwritten but we will add these back on later
 QDC_text_62_89$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_62_89$Quality]
 
@@ -1121,7 +1121,8 @@ QDC_text_62_89$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3
 # Similarly, in network stats, their edge onsets should be set to that value
 
 QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC,
-                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT")
+                                          actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
+                                          order_colname = "order")
 
 # now, merge both
 
@@ -1130,13 +1131,13 @@ rm(QDC_text_62_89)
 
 QDC_es <- QDC_es_transforms(es_df = QDC_es, vs_df = QDC_vs,
                             actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
-                            vs_actor_colname = "Actor_text")
+                            vs_actor_colname = "Actor_text", order_colname = "order")
 
 # Also transform QDC_pre_62_edges to create colour changes
 
 QDC_pre_62_edges <- QDC_es_transforms(es_df = QDC_pre_62_edges, vs_df = QDC_vs,
                             actor_colname = "ACTOR-TEXT", alter_colname = "TIE-TEXT",
-                            vs_actor_colname = "Actor_text")
+                            vs_actor_colname = "Actor_text", order_colname = "order")
 
 ## Create network dynamic object
 
@@ -1235,7 +1236,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17899
+end <- 17640
 
 # testing line
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
