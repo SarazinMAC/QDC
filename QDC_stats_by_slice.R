@@ -18,11 +18,14 @@ options(scipen = 999)
 
 original_QDC_es <- QDC_es
 
+
 ## set configurable values
 
-export_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
+export_path <- Data_path
 
 text_or_pers <- "pers"
+
+date <- format(Sys.Date(), "%Y_%m_%d")
 
 # TODO: Make the below work with both the text and person network (note last column "Actor_pers")
 #QDC_vs_colnames_to_keep <- c("onset", "terminus", "Actor_code", "Actor_pers")
@@ -69,6 +72,7 @@ find_Nth_largest <- function(x, N) {
 }
 
 
+
 # Processing -------------
 
 
@@ -88,7 +92,89 @@ QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
 
 # recreate QDC_dyn object
 
+QDC_vs <- QDC_vs[order(QDC_vs$Actor_code),]
+
 QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
+
+
+
+
+
+# static vertex attributes
+
+if (text_or_pers == "text") {
+  QDC_text_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs, 
+                                                    node_attr_df = QDC_text_nodes,
+                                                    actor_colname = "Actor_text",
+                                                    Text_or_pers_name = "Text_Name")
+} else if (text_or_pers == "pers") {
+  QDC_pers_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs, 
+                                                    node_attr_df = QDC_pers_nodes,
+                                                    Text_or_pers_name = "Pers_Name",
+                                                    actor_colname = "Actor_pers")
+}
+
+
+# Calculate clustering coefficient at a particular point in time
+
+calculate_clustering_coefficient <- function(dyn_net = QDC_dyn, .start_slice = start_slice, .end_slice = end_slice,
+                                             .slice_interval = slice_interval, attr_dyn_df, .text_or_pers = text_or_pers) {
+  
+  # Set constants
+  # Number of slices
+  slices <- seq(from = .start_slice, to = .end_slice, by = .slice_interval)
+  
+  # Actor names
+  for (col in colnames(attr_dyn_df)) {
+    dyn_net %v% col <- attr_dyn_df[[col]]
+  }
+  
+  if (text_or_pers == "text") {
+  actor_name <- dyn_net %v% "Text_Name"
+  } else if (text_or_pers == "pers") {
+    actor_name <- dyn_net %v% "Pers_Name"
+  }
+  
+  # Create initial df
+  CC_stats <- as.data.frame(actor_name)
+  
+  for (.slice in slices) {
+    net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = TRUE)
+    net_slice <- asIgraph(net_slice)
+    CC <- transitivity(graph = net_slice, type = "localundirected")
+    CC_stats <- cbind(CC_stats, .slice = CC)
+  }
+  colnames(CC_stats)[2:ncol(CC_stats)] <- slices
+  return(CC_stats)
+}
+
+
+rio::export(CC_stats, file = paste0(export_path,"Clustering_coefficient_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.xlsx"))
+
+
+# Extract community structure / modularity score of a network at a time point
+
+.slice <- 17635
+attr_dyn_df <- QDC_vs[,5:6]
+
+par(mfrow=c(2,2), mar = c(0, 0, 0, 0))
+
+# Actor names
+for (col in colnames(attr_dyn_df)) {
+  dyn_net %v% col <- attr_dyn_df[[col]]
+}
+
+net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
+#net_size <- network.size(net_slice)
+#vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
+#net_slice %v% "Pers_Name" <- vertex_names
+net_slice <- asIgraph(net_slice)
+net_slice <- as.undirected(net_slice, mode = "collapse")
+communities <- cluster_louvain(net_slice)
+plot(x = communities, y = net_slice,
+     vertex.label = V(net_slice)$Actor_pers)
+
+
 
 # Create dynamic network objects
 ## Note: not needed with line above
@@ -300,8 +386,6 @@ for (stat in stats_to_export) {
   stats_list[[stat]] <- cbind(row_names, stat_df)
   colnames(stats_list[[stat]])[1] <- slice_or_year
 }
-
-date <- format(Sys.Date(), "%Y_%m_%d")
 
 #write_xlsx(stats_list, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.xlsx"))
 
