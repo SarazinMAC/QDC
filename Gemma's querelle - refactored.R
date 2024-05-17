@@ -138,8 +138,10 @@ create_vertex_spells <- function(main_df, node_attr_df,
   QDC_vs <- QDC_vs[,c("onset","terminus","Actor_code",final_actor_colname, "order_of_entry")]
   QDC_vs[[final_actor_colname]] <- as.character(QDC_vs[[final_actor_colname]])
   #QDC_vs[, "Actor_label"] <- ifelse(QDC_vs[[final_actor_colname]]=="D'Alembert (1753)"| QDC_vs[[final_actor_colname]]=="La Chalotais (1763)"| QDC_vs[[final_actor_colname]]=="Rousseau (1762)", QDC_vs[[final_actor_colname]], "")
-  #TODO: fix this line which doesn't work when used with person actor colnames.
-#  QDC_vs[,"Corpus_num"] <- node_attr_df$Corpus_num[match(unlist(QDC_vs[[final_actor_colname]]), node_attr_df$Text_Name)]
+  #TODO: Make this condition - and other bits of codess - less convoluted (e.g. by simplifying column names and/or having general text or pers arguments)
+  if (final_actor_colname == "Actor_text") {
+    QDC_vs[,"Corpus_num"] <- node_attr_df$Corpus_num[match(unlist(QDC_vs[[final_actor_colname]]), node_attr_df$Text_Name)]
+  }
   return(QDC_vs)
 }
 
@@ -743,33 +745,6 @@ colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSO
 QDC_vs <- QDC_vs_pers_dyn
 
 
-#### Create dynamic edge attribute for the texts that are involved in a tie
-#
-#QDC_es[,"Actor_tie"] <- paste0(QDC_es$`ACTOR-PERSON`, "  &#8594 ", QDC_es$`TIE-PERSON`)
-#QDC_es[,"num"] <- 1:nrow(QDC_es)
-#QDC_es <- QDC_es[order(QDC_es$Actor_tie, QDC_es$onset),]
-#QDC_es[,"Tie_name_dyn"] <- QDC_es$Tie_name
-#
-#for (rownum in 2:nrow(QDC_es)) {
-#  if (QDC_es$Actor_tie[rownum]==QDC_es$Actor_tie[rownum-1]) {
-#    QDC_es$Tie_name_dyn[rownum] <- paste0(QDC_es$Tie_name_dyn[rownum-1], "; ", QDC_es$Tie_name[rownum])
-#  }
-#}
-#
-### Note: I effectively can't use the Tie_name and Tie_name_dyn variables yet because the below code can only accommodate one edge per dyad. But it may be useful in future. 
-### Instead, for now I have to take the value of QDC_es$Tie_name_dyn that has all the edges
-#
-#x <- QDC_es[,c("ACTOR-PERSON", "TIE-PERSON", "Tie_name_dyn")]
-#x <- x[order(x$Tie_name_dyn, decreasing = TRUE),]
-#x <- x[!duplicated(x[,c("ACTOR-PERSON", "TIE-PERSON")]),]
-#x[,"Actor_tie"] <- paste0(x$`ACTOR-PERSON`, "  &#8594 ", x$`TIE-PERSON`)
-#QDC_es[,"Tie_name_fixed"] <- x$Tie_name_dyn[match(unlist(QDC_es$Actor_tie), x$Actor_tie)]
-#
-#
-#QDC_es <- QDC_es[order(QDC_es$num),]
-#QDC_es$num=NULL
-
-
 ## Create network dynamic object
 # Don't use base_net - it screws with creation of dynamic net
 #QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)µ
@@ -848,6 +823,35 @@ for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
 
 # Add Dynamic edge attributes
 
+
+#### Create dynamic edge attribute for the texts that are involved in a tie
+
+QDC_es_dynamic_vis[,"Actor_tie"] <- paste0(QDC_es_dynamic_vis$`ACTOR-PERSON`, "  &#8594 ", QDC_es_dynamic_vis$`TIE-PERSON`)
+QDC_es_dynamic_vis[,"num"] <- 1:nrow(QDC_es_dynamic_vis)
+QDC_es_dynamic_vis <- QDC_es_dynamic_vis[order(QDC_es_dynamic_vis$Actor_tie, QDC_es_dynamic_vis$onset),]
+QDC_es_dynamic_vis[,"Tie_name_dyn"] <- QDC_es_dynamic_vis$Tie_name
+
+for (rownum in 2:nrow(QDC_es_dynamic_vis)) {
+  #TODO: Make the following condition work with years, not slices
+  if (QDC_es_dynamic_vis$Actor_tie[rownum]==QDC_es_dynamic_vis$Actor_tie[rownum-1] & QDC_es_dynamic_vis$onset[rownum-1]>17619) {
+    QDC_es_dynamic_vis$Tie_name_dyn[rownum] <- paste0(QDC_es_dynamic_vis$Tie_name_dyn[rownum-1], "; ", QDC_es_dynamic_vis$Tie_name[rownum])
+  }
+}
+
+## Note: I effectively can't use the Tie_name and Tie_name_dyn variables yet because the below code can only accommodate one edge per dyad. But it may be useful in future. 
+## Instead, for now I have to take the value of QDC_es_dynamic_vis$Tie_name_dyn that has all the edges
+## Note 16/05/2024: This is no longer true
+
+#x <- QDC_es_dynamic_vis[,c("ACTOR-PERSON", "TIE-PERSON", "Tie_name_dyn")]
+#x <- x[order(x$Tie_name_dyn, decreasing = TRUE),]
+#x <- x[!duplicated(x[,c("ACTOR-PERSON", "TIE-PERSON")]),]
+#x[,"Actor_tie"] <- paste0(x$`ACTOR-PERSON`, "  &#8594 ", x$`TIE-PERSON`)
+#QDC_es_dynamic_vis[,"Tie_name_fixed"] <- x$Tie_name_dyn[match(unlist(QDC_es_dynamic_vis$Actor_tie), x$Actor_tie)]
+
+
+QDC_es_dynamic_vis <- QDC_es_dynamic_vis[order(QDC_es_dynamic_vis$num),]
+QDC_es_dynamic_vis$num=NULL
+
 # loop over edge data to add the dynamic attributes on the edge
 for(row in 1:nrow(QDC_es_dynamic_vis)){
   # get the id of the edge from its tail and head
@@ -855,7 +859,7 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
                          alter=QDC_es_dynamic_vis$Tie_code[row])
   activate.edge.attribute(QDC_pers_dyn,'edge_colour',QDC_es_dynamic_vis$Qual_col[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
-  activate.edge.attribute(QDC_pers_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
+  activate.edge.attribute(QDC_pers_dyn,'Tie_name_dyn',QDC_es_dynamic_vis$Tie_name_dyn[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
 }
 
@@ -866,7 +870,9 @@ chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
 
 ## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
 for (char in chars[,1]) {
-  QDC_pers_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "vertex.names") 
+  QDC_pers_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "vertex.names")
+  QDC_pers_dyn %v% "Pers_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "Pers_Name")
+  
 }; rm(char)
 
 
@@ -879,7 +885,7 @@ for (char in chars[,1]) {
 ## Normal way of doing it
 
 start <- 17619
-end <- 17640
+end <- 17899
 
 compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
 
@@ -964,18 +970,18 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                vertex.border="#ffffff",
                                vertex.col = "vertex_colour",
                                #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
-                               main="Querelle des coll?ges, 1762-1789",
+                               main="Querelle des collèges, 1762-1789",
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
                                xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
                                vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
                                edge.lwd = 2,
-                               vertex.tooltip = function(slice){paste0(slice %v% 'Actor_pers', " - ", slice %v% 'onset')}, #(QDC_pers_dyn %v% 'vertex.names')
-                 #              edge.tooltip = function(slice){slice %e% 'Tie_name_fix'},
+                               vertex.tooltip = function(slice){paste0(slice %v% 'Pers_Name')}, #(QDC_pers_dyn %v% 'vertex.names')
+                               edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties.html",
+                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_05_16.html",
                verbose=TRUE)
 
 
