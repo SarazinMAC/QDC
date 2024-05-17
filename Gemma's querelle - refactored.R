@@ -14,7 +14,8 @@ library(networkDynamic)
 # Configurable values
 
 Data_name <- "QDC_2024_05_13.xlsx"
-Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
+#Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
+Data_path <- "D:\\Git Repos\\QDC\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
 
@@ -551,7 +552,7 @@ QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 
 
-
+.
 
 
 
@@ -584,9 +585,9 @@ QDC_vs <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_pers_nodes,
                                alter_colname = "TIE-PERSON")
 
 QDC_for_pers_dyn <- QDC
-#QDC_for_pers_dyn$`TIE-TEXT`[
-#  is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] <- QDC_for_pers_dyn$`TIE-PERSON`[
-#    is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] 
+QDC_for_pers_dyn$`TIE-TEXT`[
+  is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] <- QDC_for_pers_dyn$`TIE-PERSON`[
+    is.na(QDC_for_pers_dyn$`TIE-TEXT`) & !(is.na(QDC_for_pers_dyn$`TIE-PERSON`))] 
 
 ## Create edge spell
 ## This is tricky: If I just copy and paste, without meaningful modification, the QDC_text procedure, then all ties of an actor in a given period will just enter at once, at the first time point. This makes no sense.
@@ -645,11 +646,13 @@ QDC_pre_62_edges <- extract_pre_qdc_edges(main_df = QDC_for_pers_dyn,
 
 # Now, merge the various datasets and create dynamic edge attributes
 
+
 QDC_text_for_pers_net <- rbind(QDC_pre_62_edges, QDC_text_for_pers_net)
 
 QDC_vs_text_dyn <- create_vertex_spells(main_df = QDC, node_attr_df = QDC_text_nodes,
                                actor_colname = "ACTOR-TEXT", final_actor_colname = "Actor_text",
                                alter_colname = "TIE-TEXT")
+
 
 # TODO: check whether empty Tie_code here is an issue later on
 
@@ -735,6 +738,9 @@ colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
 colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
 colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
 
+# Need to replace QdC_vs with a text version for now
+
+QDC_vs <- QDC_vs_pers_dyn
 
 
 #### Create dynamic edge attribute for the texts that are involved in a tie
@@ -773,7 +779,7 @@ colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSO
 #QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c("onset", "terminus", "Actor_code", "Tie_code", "Quality", "Qual_col")], create.TEAs = TRUE, verbose = TRUE)
 
 
-QDC_vs_dynamic_vis <- QDC_vs_pers_dyn
+QDC_vs_dynamic_vis <- QDC_vs
 
 QDC_es_dynamic_vis <- QDC_es
 
