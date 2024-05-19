@@ -11,6 +11,7 @@ library(writexl)
 library(tergm)
 library(intergraph)
 library(dplyr)
+library(Cairo)
 
 options(scipen = 999)
 
@@ -154,26 +155,54 @@ rio::export(CC_stats, file = paste0(export_path,"Clustering_coefficient_by_", sl
 
 # Extract community structure / modularity score of a network at a time point
 
-.slice <- 17635
-attr_dyn_df <- QDC_vs[,5:6]
+dyn_net = QDC_dyn
 
-par(mfrow=c(2,2), mar = c(0, 0, 0, 0))
+attr_dyn_df <- QDC_vs[,5:ncol(QDC_vs)]
+
+par(mfrow=c(2,2), mar = c(3, 0, 3, 0))
+
+par(mfrow=c(1,1), mar = c(3, 0, 3, 0))
 
 # Actor names
 for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
-net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
-#net_size <- network.size(net_slice)
-#vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
-#net_slice %v% "Pers_Name" <- vertex_names
-net_slice <- asIgraph(net_slice)
-net_slice <- as.undirected(net_slice, mode = "collapse")
-communities <- cluster_louvain(net_slice)
-plot(x = communities, y = net_slice,
-     vertex.label = V(net_slice)$Actor_pers)
 
+year <- 1789
+
+slices <- c(year*10, year*10+3, year*10+6, year*10+8)
+
+slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
+
+plot <- FALSE
+
+#slices <- 17899
+all_community_sizes <- list()
+
+for (.slice in slices){
+  net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
+  #net_size <- network.size(net_slice)
+  #vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
+  #net_slice %v% "Pers_Name" <- vertex_names
+  net_slice <- asIgraph(net_slice)
+  net_slice <- as.undirected(net_slice, mode = "collapse")
+  communities <- cluster_louvain(net_slice)
+  if (plot) {
+    plot(x = communities, y = net_slice,
+         vertex.label = V(net_slice)$Actor_pers)
+    title(.slice, cex.main = 3)
+    vis <- recordPlot()
+  }
+  community_sizes <- sizes(communities)
+  all_community_sizes[[as.character(.slice)]] <- community_sizes
+}
+
+#pdf(width = 2400, height = 1800, file = "test.pdf",)
+Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
+
+print(vis)
+dev.off()
 
 
 # Create dynamic network objects
