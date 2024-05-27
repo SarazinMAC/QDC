@@ -12,6 +12,7 @@ library(tergm)
 library(intergraph)
 library(dplyr)
 library(Cairo)
+library(data.table)
 
 options(scipen = 999)
 
@@ -168,10 +169,10 @@ for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
+#dyn_net %v% "vertex.names" <-  dyn_net %v% "Actor_pers"
+#year <- 1789
 
-year <- 1789
-
-slices <- c(year*10, year*10+3, year*10+6, year*10+8)
+#slices <- c(year*10, year*10+3, year*10+6, year*10+8)
 
 slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
@@ -179,6 +180,11 @@ plot <- FALSE
 
 #slices <- 17899
 all_community_sizes <- list()
+all_community_stats_combined <- list()
+
+for (i in 1:1000) {
+  
+all_community_stats <- list()
 
 for (.slice in slices){
   net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
@@ -186,6 +192,7 @@ for (.slice in slices){
   #vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
   #net_slice %v% "Pers_Name" <- vertex_names
   net_slice <- asIgraph(net_slice)
+  V(net_slice)$name <- V(net_slice)$Actor_pers
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
   if (plot) {
@@ -196,7 +203,25 @@ for (.slice in slices){
   }
   community_sizes <- sizes(communities)
   all_community_sizes[[as.character(.slice)]] <- community_sizes
+  community_stats <- c("slice" = .slice,
+                       "N_communities" = length(communities),
+                       "net_modularity" = modularity(communities),
+                       "min_community_size" = min(community_sizes), 
+                       "max_community_size" = max(community_sizes),
+                       "mean_community_size" = mean(community_sizes),
+                       "sd_community_size" = sd(community_sizes)
+                       )
+  all_community_stats[[as.character(.slice)]] <- community_stats
 }
+all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
+all_community_stats_combined[[i]] <- all_community_stats
+if (i %% 10 == 0) {
+  print(paste0("Done with iteration ", i))
+}
+}
+
+all_community_stats_combined_df <- abind::abind(all_community_stats_combined, along = 3)
+all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
 
 #pdf(width = 2400, height = 1800, file = "test.pdf",)
 Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
