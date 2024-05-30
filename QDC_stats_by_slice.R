@@ -13,6 +13,7 @@ library(intergraph)
 library(dplyr)
 library(Cairo)
 library(data.table)
+library(ggplot2)
 
 options(scipen = 999)
 
@@ -228,9 +229,7 @@ if (i %% 10 == 0) {
 all_community_stats_combined_df <- abind::abind(all_community_stats_combined, along = 3)
 all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
 
-#pdf(width = 2400, height = 1800, file = "test.pdf",)
 Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
-
 print(vis)
 dev.off()
 
@@ -366,6 +365,7 @@ degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end
 indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
 
+
 eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
 eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e6)
 
@@ -486,3 +486,28 @@ for (stat in stats_to_export[stats_to_export!="net_stats"]) {
 }
 
 write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
+
+
+
+## Export degree centrality results
+
+degree_data <- degree[nrow(indegree),]
+
+degree_data <- as.data.frame(degree_data)
+
+ggplot(data = degree_data,
+       aes(x = degree_data)) +
+  geom_histogram(binwidth = 1, fill = "#FF776C", col = "black") +
+  labs(x = "Degree centrality", y = "Number of nodes") +
+  theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60)) +
+  theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt"))
+
+
+# Export vis
+
+vis <- recordPlot()
+Cairo(file = paste0(export_path, "Degree_centrality_", text_or_pers, "_network.png"), width = 2400, height = 1800, type = "png", bg = "white")
+print(vis)
+dev.off()
+
