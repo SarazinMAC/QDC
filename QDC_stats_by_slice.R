@@ -73,6 +73,14 @@ find_Nth_largest <- function(x, N) {
   return(names)
 }
 
+# create an igraph network slice
+
+as_igraph_net_slice <- function(dynamic_net, v_name_attr, slice, retain_vertices) {
+  net_slice <- network.collapse(dynamic_net, at = slice, rule = "any", active.default = FALSE, retain.all.vertices = retain_vertices)
+  net_slice <- asIgraph(net_slice)
+  V(net_slice)$name <- vertex_attr(net_slice, v_name_attr)
+  return(net_slice)
+}
 
 
 # Processing -------------
@@ -188,11 +196,8 @@ all_community_stats <- list()
 
 for (.slice in slices){
   net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
-  #net_size <- network.size(net_slice)
-  #vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
-  #net_slice %v% "Pers_Name" <- vertex_names
   net_slice <- asIgraph(net_slice)
-  V(net_slice)$name <- V(net_slice)$Actor_pers
+  V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
   if (plot) {
@@ -228,6 +233,20 @@ Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, 
 
 print(vis)
 dev.off()
+
+# Calculate Bonacich alpha Centrality
+
+alphacent_stats <- data.frame(dyn_net %v% "Actor_pers")
+
+for (.slice in as.character(slices)) {
+  net_slice <- as_igraph_net_slice(dynamic_net = dyn_net, v_name_attr = "Actor_pers", slice = as.numeric(.slice), retain_vertices = TRUE)
+  #net_slice <- simplify(net_slice, remove.multiple = TRUE, remove.loops = TRUE)
+  #net_slice <- delete.vertices(net_slice, degree(net_slice)==0)
+  alphacent_stats[[.slice]] <- alpha_centrality(net_slice, alpha = 0.1)
+  } 
+colnames(alphacent_stats)[1] <- "actor_name"
+
+rio::export(alphacent_stats, file = paste0(export_path,"alpha_centrality_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.csv"))
 
 
 # Create dynamic network objects
