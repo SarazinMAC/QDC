@@ -15,7 +15,7 @@ library(networkDynamic)
 
 Data_name <- "QDC_2024_05_13.xlsx"
 #Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
-Data_path <- "D:\\Git Repos\\QDC\\"
+Data_path <- "D:\\Git_Repos\\QDC\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
 
