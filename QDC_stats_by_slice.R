@@ -178,7 +178,9 @@ for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
-#dyn_net %v% "vertex.names" <-  dyn_net %v% "Actor_pers"
+## Set weights as dynamic edge attribute
+
+
 #year <- 1789
 
 #slices <- c(year*10, year*10+3, year*10+6, year*10+8)
@@ -187,20 +189,27 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-#slices <- 17899
+slices <- 17635
 all_community_sizes <- list()
+
 all_community_stats_combined <- list()
+all_communities_combined <- list()
+all_memberships_combined <- list()
 
-for (i in 1:1000) {
-  
-all_community_stats <- list()
+number_of_iterations <- 1000
 
+for (i in 1:number_of_iterations) {
+  all_communities <- list()
+  all_memberships <- list()
+  all_community_stats <- list()
 for (.slice in slices){
   net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
   net_slice <- asIgraph(net_slice)
   V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
+  all_communities[[as.character(.slice)]] <- communities
+  all_memberships[[as.character(.slice)]] <- membership(communities)
   if (plot) {
     plot(x = communities, y = net_slice,
          vertex.label = V(net_slice)$Actor_pers)
@@ -220,7 +229,10 @@ for (.slice in slices){
   all_community_stats[[as.character(.slice)]] <- community_stats
 }
 all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
-all_community_stats_combined[[i]] <- all_community_stats
+all_community_stats_combined[[as.character(i)]] <- all_community_stats
+all_communities_combined[[as.character(i)]] <- all_communities
+all_memberships_combined[[as.character(i)]] <- all_memberships
+
 if (i %% 10 == 0) {
   print(paste0("Done with iteration ", i))
 }
@@ -232,6 +244,44 @@ all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combi
 Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
+
+# Combine community structures into one adjacency matrix per slice
+
+
+# Record the number of times that particular membership results have occurred, and export the visual 
+
+# Flatten the list of lists into a single list of strings
+membership_strings <- unlist(lapply(all_memberships_combined, function(x) toString(unlist(x))))
+
+# Count the number of times each unique string appears
+membership_counts <- table(membership_strings)
+membership_counts
+membership_probs <- prop.table(membership_counts)
+
+# Now 'membership_counts' is a table where the names are the unique membership structures (as strings), and the values are the number of times each structure appears
+
+# Extract the results of the membership structure of the network, in order of likelihood
+
+membership_by_count <- names(sort(membership_counts, decreasing = T))
+
+#for each result, identify one element in communities that has this membership structure, and export it
+
+for (membership in membership_by_count) {
+  membership_prob <- membership_probs[which(names(membership_probs)==membership)]
+  
+  community <- which(membership_strings==membership)[1]
+  
+  communities_to_plot <- all_communities_combined[[community]][[1]]
+  plot(x = communities_to_plot, y = net_slice,
+       vertex.label = V(net_slice)$Actor_pers)
+  title(.slice, cex.main = 3)
+  vis <- recordPlot()
+  
+  Cairo(file = paste0(export_path, "Communities_", .slice, "_likelihood_", membership_prob, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
+  print(vis)
+  dev.off()
+}
+
 
 # Calculate Bonacich alpha Centrality
 
