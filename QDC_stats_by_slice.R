@@ -14,6 +14,7 @@ library(dplyr)
 library(Cairo)
 library(data.table)
 library(ggplot2)
+library(extrafont)
 
 options(scipen = 999)
 
@@ -180,6 +181,14 @@ for (col in colnames(attr_dyn_df)) {
 
 ## Set weights as dynamic edge attribute
 
+for(row in 1:nrow(QDC_es)){
+  # get the id of the edge from its tail and head
+  edge_id <- get.edgeIDs(dyn_net,v=QDC_es$Actor_code[row],
+                         alter=QDC_es$Tie_code[row])
+  activate.edge.attribute(dyn_net,'edge_weights',QDC_es$edge_weights[row],
+                          onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
+}
+
 
 #year <- 1789
 
@@ -189,7 +198,7 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-slices <- 17635
+#slices <- c(17634, 17635)
 all_community_sizes <- list()
 
 all_community_stats_combined <- list()
@@ -206,6 +215,7 @@ for (.slice in slices){
   net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
   net_slice <- asIgraph(net_slice)
   V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
+  E(net_slice)$weight <- edge_attr(net_slice, "edge_weights")
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
   all_communities[[as.character(.slice)]] <- communities
@@ -241,9 +251,69 @@ if (i %% 10 == 0) {
 all_community_stats_combined_df <- abind::abind(all_community_stats_combined, along = 3)
 all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
 
+# Export dataframe
+rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats.xlsx"), rowNames = FALSE)
+
+#Export visual
+
 Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
+
+# Visualise change in modularity, showing intervention by La Chalotais (1763) and Borrely
+
+all_community_stats_combined_df$year <- trunc(all_community_stats_combined_df$slice/10)
+all_community_stats_combined_df$year_for_vis <- as.Date(as.character(all_community_stats_combined_df$year), format = "%Y")
+
+# X-axis: Create a named vector where the names are the 'slice' values and the values are the 'year_for_vis' values
+year_labels <- setNames(format(all_community_stats_combined_df$year_for_vis, "%Y"), all_community_stats_combined_df$slice)
+
+# X-axis: Select every element of 'slice' that ends in 0
+breaks <- all_community_stats_combined_df$slice[seq(1, length(all_community_stats_combined_df$slice), by = 10)]
+
+# Modify year_labels accordingly
+year_labels <- year_labels[as.character(breaks)]
+
+# Create "interventions" df for showing La Chal (1763) and Borrelly (1768) intervention
+
+intervention_slices <- unique(
+  QDC_es$onset[QDC_es$`ACTOR-PERSON`=="La Chalotais" & QDC_es$onset>17630 | 
+                                      QDC_es$`ACTOR-PERSON`=="Borrelly" & QDC_es$onset<17700]
+)
+
+interventions <- all_community_stats_combined_df[all_community_stats_combined_df$slice %in% intervention_slices,]
+interventions$slice <- interventions$slice-1
+interventions$vline_labels <- c("La Chalotais (1763)", "Borrelly (1768)")
+
+# load fonts
+
+#font_import()
+loadfonts(device = "win")
+
+# Create dataframe with just La Chalotais and Borrely
+ggplot(data = all_community_stats_combined_df[c(-1, -2),],
+       aes(x = slice, y = net_modularity)) +
+  geom_line(col = "black") +
+  geom_vline(data = interventions, mapping = aes(xintercept = slice), linewidth = 0.4, color = "red", show.legend = FALSE) +
+  geom_label(data = interventions, mapping = aes(x = slice, y = 0.66, label = vline_labels, hjust = 0), size = 10) +
+  labs(x = "year", y = "Network modularity") +
+  scale_x_continuous(name = "year", breaks = breaks, labels = year_labels) +
+  theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt")) +
+  theme(text = element_text(family = "Calibri"))
+
+
+# Export vis
+
+vis <- recordPlot()
+Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network.png"), width = 2400, height = 1800, type = "png", bg = "white")
+print(vis)
+dev.off()
+
+
+
+
 
 # Combine community structures into one adjacency matrix per slice
 
