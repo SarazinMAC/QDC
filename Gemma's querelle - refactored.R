@@ -1294,15 +1294,17 @@ for (char in chars[,1]) {
 }; rm(char)
 
 
-##### TESTING - I am testing here #####
+##### Create dynamic visual #####
 
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
 end <- 17640
 
-# testing line
-QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+# Calculate animation
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+# Trying to change aggregation_dur
+QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 #QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
@@ -1322,7 +1324,7 @@ for (i in seq(from = start,to = end, by=1)) {
 
 year_label <- function(s){
   paste(trunc((QDC_text_anim$gal$slice.par$start+
-                 QDC_text_anim$gal$slice.par$interval*s)/10))
+                 QDC_text_anim$gal$slice.par$interval*s-1)/10))
   }
 
 node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/
@@ -1346,7 +1348,7 @@ render.d3movie(QDC_text_anim2,
                xlab = year_label,
                vertex.cex = node_size,
                usearrows=TRUE,
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+               d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
                output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
