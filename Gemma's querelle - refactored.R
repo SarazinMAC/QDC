@@ -290,6 +290,12 @@ create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, Text_or_pers_name, 
   return(vs_df)
 }
 
+# TODO: Introduce if function to make code adaptable to text or pers network, and delete pers version below
+
+year_label <- function(s){
+  paste(trunc((QDC_text_anim$gal$slice.par$start+
+                 QDC_text_anim$gal$slice.par$interval*s-1)/10))
+}
 
 
 
@@ -923,6 +929,7 @@ render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE)
 ## Trying to make it less bunched
 
 QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 #QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
@@ -936,6 +943,11 @@ for (i in seq(from = start,to = end+1, by=1)) {
 
 for (i in seq(from = start,to = end+1, by=1)) {
   activate.vertex.attribute(QDC_pers_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.y", at = i))/3.2)
+}
+
+year_label <- function(s){
+  paste(trunc((QDC_pers_anim2$gal$slice.par$start+
+                 QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
 }
 
 
@@ -975,6 +987,8 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                main="Querelle des collèges, 1762-1789",
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
                                xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+#                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+                               xlab = year_label,
                                vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
@@ -985,6 +999,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
                                launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_05_16.html",
+                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_05.html",
                verbose=TRUE)
 
 
@@ -1326,6 +1341,8 @@ year_label <- function(s){
   paste(trunc((QDC_text_anim$gal$slice.par$start+
                  QDC_text_anim$gal$slice.par$interval*s-1)/10))
   }
+# Note: year_label function has been moved to top of file
+
 
 node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/
                                 (sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((
