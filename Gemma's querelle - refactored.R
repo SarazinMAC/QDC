@@ -554,7 +554,7 @@ QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 
 
-.
+
 
 
 
@@ -772,7 +772,7 @@ QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vi
 
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
 
-QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:6], edge.spells = QDC_es_dynamic_vis[,c("onset", "terminus", "Actor_code", "Tie_code", "Qual_col")], create.TEAs = TRUE)
+QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis, edge.spells = QDC_es_dynamic_vis[,c("onset", "terminus", "Actor_code", "Tie_code", "Qual_col")], create.TEAs = TRUE)
 
 #reconcile.vertex.activity(QDC_pers_dyn, mode = "expand.to.edges", edge.active.default = FALSE)
 
@@ -811,13 +811,27 @@ QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis,
                                                      Text_or_pers_name = "Pers_Name",
                                                      actor_colname = "Actor_pers")
 
+
+##### CORRIGER les accents etc.
+
+chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
+
+## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
+for (char in chars[,1]) {
+  QDC_vs_dynamic_vis_attr$Actor_pers <- gsub(char, chars[which(chars$Character==char),"R_HTML"], QDC_vs_dynamic_vis_attr$Actor_pers)
+}; rm(char)
+
+
 # loop over vertex data to add the dynamic attributes on the vertices
 for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
   activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'vertex_colour',
                             value = QDC_vs_dynamic_vis_attr$vertex_colour[row],
                             onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
-  
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'Actor_pers_name',
+                            value = QDC_vs_dynamic_vis_attr$Actor_pers[row],
+                            onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
+                            v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
 
@@ -862,18 +876,6 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
   activate.edge.attribute(QDC_pers_dyn,'Tie_name_dyn',QDC_es_dynamic_vis$Tie_name_dyn[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
 }
-
-
-##### CORRIGER les accents etc.
-
-chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
-
-## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
-for (char in chars[,1]) {
-  QDC_pers_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "vertex.names")
-  QDC_pers_dyn %v% "Pers_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "Pers_Name")
-  
-}; rm(char)
 
 
 
@@ -977,7 +979,8 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
                                edge.lwd = 2,
-                               vertex.tooltip = function(slice){paste0(slice %v% 'Pers_Name')}, #(QDC_pers_dyn %v% 'vertex.names')
+                               vertex.tooltip = function(slice){paste0(slice %v% 'Actor_pers_name')}, 
+#                               vertex.tooltip = QDC_pers_anim2 %v% 'Pers_Name', 
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
