@@ -198,7 +198,7 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-#slices <- c(17634, 17635)
+slices <- c(17634, 17635)
 all_community_sizes <- list()
 
 all_community_stats_combined <- list()
@@ -216,8 +216,11 @@ for (.slice in slices){
   net_slice <- asIgraph(net_slice)
   V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
   E(net_slice)$weight <- edge_attr(net_slice, "edge_weights")
+  # Remove loops because they influence community detection algorithm
+  net_slice <- simplify(net_slice, remove.loops = TRUE)
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
+#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 3)
   all_communities[[as.character(.slice)]] <- communities
   all_memberships[[as.character(.slice)]] <- membership(communities)
   if (plot) {
@@ -231,6 +234,7 @@ for (.slice in slices){
   community_stats <- c("slice" = .slice,
                        "N_communities" = length(communities),
                        "net_modularity" = modularity(communities),
+#                       "net_modularity" = communities$quality,
                        "min_community_size" = min(community_sizes), 
                        "max_community_size" = max(community_sizes),
                        "mean_community_size" = mean(community_sizes),
@@ -248,11 +252,14 @@ if (i %% 10 == 0) {
 }
 }
 
+
+
+
 all_community_stats_combined_df <- abind::abind(all_community_stats_combined, along = 3)
 all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
 
 # Export dataframe
-rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats.xlsx"), rowNames = FALSE)
+rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats_no_loops.xlsx"), rowNames = FALSE)
 
 #Export visual
 
@@ -307,7 +314,7 @@ ggplot(data = all_community_stats_combined_df[c(-1, -2),],
 # Export vis
 
 vis <- recordPlot()
-Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network.png"), width = 2400, height = 1800, type = "png", bg = "white")
+Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
 
@@ -347,7 +354,7 @@ for (membership in membership_by_count) {
   title(.slice, cex.main = 3)
   vis <- recordPlot()
   
-  Cairo(file = paste0(export_path, "Communities_", .slice, "_likelihood_", membership_prob, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
+  Cairo(file = paste0(export_path, "Communities_", .slice, "_likelihood_", membership_prob, "_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
   print(vis)
   dev.off()
 }
@@ -609,15 +616,25 @@ write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_o
 
 
 
-## Export degree centrality results
+## Export overall degree centrality results
 
-degree_data <- degree[nrow(indegree),]
+degree_data <- degree[nrow(degree),]
 
 degree_data <- as.data.frame(degree_data)
+
+# create actor labels to display on the visualisation
+degree_data$labels <- NA
+actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville")
+percentages <- c("(16.7%)", "(8.6%)", "(11.4%)", "(9.6%)")
+
+for (i in seq_along(actors_to_label)) {
+  degree_data[actors_to_label[i],"labels"] <- paste0(actors_to_label[i], " ", percentages[i])
+}
 
 ggplot(data = degree_data,
        aes(x = degree_data)) +
   geom_histogram(binwidth = 1, fill = "#FF776C", col = "black") +
+  geom_label(data = degree_data[!is.na(degree_data$labels),], mapping = aes(x = degree_data, y = c(2, 2, 4, 3), label = labels, hjust = c(0.7, 0.5, 0.5, 0.5)), size = 15) +
   labs(x = "Degree centrality", y = "Number of nodes") +
   theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
   scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60)) +
@@ -627,7 +644,7 @@ ggplot(data = degree_data,
 # Export vis
 
 vis <- recordPlot()
-Cairo(file = paste0(export_path, "Degree_centrality_", text_or_pers, "_network.png"), width = 2400, height = 1800, type = "png", bg = "white")
+Cairo(file = paste0(export_path, "Degree_centrality_", text_or_pers, "_network_node_labels.png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
 
