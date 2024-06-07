@@ -13,10 +13,9 @@ library(networkDynamic)
 
 # Configurable values
 
-Data_name <- "QDC_2024_05_13.xlsx"
 #Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
-Data_path <- "D:\\Git Repos\\QDC\\"
 Data_name <- "QDC_2024_06_07.xlsx"
+Data_path <- "D:\\Git_Repos\\QDC\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
 
@@ -760,6 +759,29 @@ QDC_vs <- QDC_vs_pers_dyn
 #QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
 #QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c("onset", "terminus", "Actor_code", "Tie_code", "Quality", "Qual_col")], create.TEAs = TRUE, verbose = TRUE)
 
+#### Create weight attribute for ties
+
+edge_weights_df <- QDC_es
+edge_weights_df[,"num"] <- 1:nrow(edge_weights_df)
+edge_weights_df <- edge_weights_df[order(edge_weights_df$Actor_code, edge_weights_df$Tie_code, edge_weights_df$onset),]
+edge_weights_df[,"ego_alter"] <- paste0(edge_weights_df$Actor_code, "_", edge_weights_df$Tie_code)
+edge_weights_df$edge_weights <- 1
+
+for (rownum in 2:nrow(edge_weights_df)) {
+  #TODO: Make the following condition work with years, not slices
+  if (edge_weights_df$ego_alter[rownum]==edge_weights_df$ego_alter[rownum-1]) {
+    edge_weights_df$edge_weights[rownum] <- edge_weights_df$edge_weights[rownum-1] + 1
+  }
+}
+
+edge_weights_df <- edge_weights_df[order(edge_weights_df$num),]
+
+## Attach edge weights back onto QDC_es, and set pre-QDC edge weights to 1
+QDC_es$edge_weights <- edge_weights_df$edge_weights
+QDC_pre_62_edges$edge_weights <- 1
+
+
+## Create vertex and edge spells for visual
 
 QDC_vs_dynamic_vis <- QDC_vs
 
@@ -882,6 +904,10 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
   activate.edge.attribute(QDC_pers_dyn,'Tie_name_dyn',QDC_es_dynamic_vis$Tie_name_dyn[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  # TODO: Check that this works
+  activate.edge.attribute(QDC_pers_dyn,'edge_weights',QDC_es_dynamic_vis$edge_weights[row],
+                          onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
+  
 }
 
 

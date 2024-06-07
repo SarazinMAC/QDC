@@ -13,6 +13,8 @@ library(intergraph)
 library(dplyr)
 library(Cairo)
 library(data.table)
+library(ggplot2)
+library(extrafont)
 
 options(scipen = 999)
 
@@ -73,6 +75,14 @@ find_Nth_largest <- function(x, N) {
   return(names)
 }
 
+# create an igraph network slice
+
+as_igraph_net_slice <- function(dynamic_net, v_name_attr, slice, retain_vertices) {
+  net_slice <- network.collapse(dynamic_net, at = slice, rule = "any", active.default = FALSE, retain.all.vertices = retain_vertices)
+  net_slice <- asIgraph(net_slice)
+  V(net_slice)$name <- vertex_attr(net_slice, v_name_attr)
+  return(net_slice)
+}
 
 
 # Processing -------------
@@ -169,7 +179,17 @@ for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
-#dyn_net %v% "vertex.names" <-  dyn_net %v% "Actor_pers"
+## Set weights as dynamic edge attribute
+
+for(row in 1:nrow(QDC_es)){
+  # get the id of the edge from its tail and head
+  edge_id <- get.edgeIDs(dyn_net,v=QDC_es$Actor_code[row],
+                         alter=QDC_es$Tie_code[row])
+  activate.edge.attribute(dyn_net,'edge_weights',QDC_es$edge_weights[row],
+                          onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
+}
+
+
 #year <- 1789
 
 #slices <- c(year*10, year*10+3, year*10+6, year*10+8)
@@ -178,23 +198,31 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-#slices <- 17899
+slices <- c(17634, 17635)
 all_community_sizes <- list()
+
 all_community_stats_combined <- list()
+all_communities_combined <- list()
+all_memberships_combined <- list()
 
-for (i in 1:1000) {
-  
-all_community_stats <- list()
+number_of_iterations <- 1000
 
+for (i in 1:number_of_iterations) {
+  all_communities <- list()
+  all_memberships <- list()
+  all_community_stats <- list()
 for (.slice in slices){
   net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
-  #net_size <- network.size(net_slice)
-  #vertex_names <- (dyn_net %v% "Pers_Name")[1:net_size] 
-  #net_slice %v% "Pers_Name" <- vertex_names
   net_slice <- asIgraph(net_slice)
-  V(net_slice)$name <- V(net_slice)$Actor_pers
+  V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
+  E(net_slice)$weight <- edge_attr(net_slice, "edge_weights")
+  # Remove loops because they influence community detection algorithm
+  net_slice <- simplify(net_slice, remove.loops = TRUE)
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
+#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 3)
+  all_communities[[as.character(.slice)]] <- communities
+  all_memberships[[as.character(.slice)]] <- membership(communities)
   if (plot) {
     plot(x = communities, y = net_slice,
          vertex.label = V(net_slice)$Actor_pers)
@@ -206,6 +234,7 @@ for (.slice in slices){
   community_stats <- c("slice" = .slice,
                        "N_communities" = length(communities),
                        "net_modularity" = modularity(communities),
+#                       "net_modularity" = communities$quality,
                        "min_community_size" = min(community_sizes), 
                        "max_community_size" = max(community_sizes),
                        "mean_community_size" = mean(community_sizes),
@@ -214,20 +243,136 @@ for (.slice in slices){
   all_community_stats[[as.character(.slice)]] <- community_stats
 }
 all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
-all_community_stats_combined[[i]] <- all_community_stats
+all_community_stats_combined[[as.character(i)]] <- all_community_stats
+all_communities_combined[[as.character(i)]] <- all_communities
+all_memberships_combined[[as.character(i)]] <- all_memberships
+
 if (i %% 10 == 0) {
   print(paste0("Done with iteration ", i))
 }
 }
 
+
+
+
 all_community_stats_combined_df <- abind::abind(all_community_stats_combined, along = 3)
 all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
 
-#pdf(width = 2400, height = 1800, file = "test.pdf",)
-Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
+# Export dataframe
+rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats_no_loops.xlsx"), rowNames = FALSE)
 
+#Export visual
+
+Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
+
+# Visualise change in modularity, showing intervention by La Chalotais (1763) and Borrely
+
+all_community_stats_combined_df$year <- trunc(all_community_stats_combined_df$slice/10)
+all_community_stats_combined_df$year_for_vis <- as.Date(as.character(all_community_stats_combined_df$year), format = "%Y")
+
+# X-axis: Create a named vector where the names are the 'slice' values and the values are the 'year_for_vis' values
+year_labels <- setNames(format(all_community_stats_combined_df$year_for_vis, "%Y"), all_community_stats_combined_df$slice)
+
+# X-axis: Select every element of 'slice' that ends in 0
+breaks <- all_community_stats_combined_df$slice[seq(1, length(all_community_stats_combined_df$slice), by = 10)]
+
+# Modify year_labels accordingly
+year_labels <- year_labels[as.character(breaks)]
+
+# Create "interventions" df for showing La Chal (1763) and Borrelly (1768) intervention
+
+intervention_slices <- unique(
+  QDC_es$onset[QDC_es$`ACTOR-PERSON`=="La Chalotais" & QDC_es$onset>17630 | 
+                                      QDC_es$`ACTOR-PERSON`=="Borrelly" & QDC_es$onset<17700]
+)
+
+interventions <- all_community_stats_combined_df[all_community_stats_combined_df$slice %in% intervention_slices,]
+interventions$slice <- interventions$slice-1
+interventions$vline_labels <- c("La Chalotais (1763)", "Borrelly (1768)")
+
+# load fonts
+
+#font_import()
+loadfonts(device = "win")
+
+# Create dataframe with just La Chalotais and Borrely
+ggplot(data = all_community_stats_combined_df[c(-1, -2),],
+       aes(x = slice, y = net_modularity)) +
+  geom_line(col = "black") +
+  geom_vline(data = interventions, mapping = aes(xintercept = slice), linewidth = 0.4, color = "red", show.legend = FALSE) +
+  geom_label(data = interventions, mapping = aes(x = slice, y = 0.66, label = vline_labels, hjust = 0), size = 10) +
+  labs(x = "year", y = "Network modularity") +
+  scale_x_continuous(name = "year", breaks = breaks, labels = year_labels) +
+  theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt")) +
+  theme(text = element_text(family = "Calibri"))
+
+
+# Export vis
+
+vis <- recordPlot()
+Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
+print(vis)
+dev.off()
+
+
+
+
+
+# Combine community structures into one adjacency matrix per slice
+
+
+# Record the number of times that particular membership results have occurred, and export the visual 
+
+# Flatten the list of lists into a single list of strings
+membership_strings <- unlist(lapply(all_memberships_combined, function(x) toString(unlist(x))))
+
+# Count the number of times each unique string appears
+membership_counts <- table(membership_strings)
+membership_counts
+membership_probs <- prop.table(membership_counts)
+
+# Now 'membership_counts' is a table where the names are the unique membership structures (as strings), and the values are the number of times each structure appears
+
+# Extract the results of the membership structure of the network, in order of likelihood
+
+membership_by_count <- names(sort(membership_counts, decreasing = T))
+
+#for each result, identify one element in communities that has this membership structure, and export it
+
+for (membership in membership_by_count) {
+  membership_prob <- membership_probs[which(names(membership_probs)==membership)]
+  
+  community <- which(membership_strings==membership)[1]
+  
+  communities_to_plot <- all_communities_combined[[community]][[1]]
+  plot(x = communities_to_plot, y = net_slice,
+       vertex.label = V(net_slice)$Actor_pers)
+  title(.slice, cex.main = 3)
+  vis <- recordPlot()
+  
+  Cairo(file = paste0(export_path, "Communities_", .slice, "_likelihood_", membership_prob, "_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
+  print(vis)
+  dev.off()
+}
+
+
+# Calculate Bonacich alpha Centrality
+
+alphacent_stats <- data.frame(dyn_net %v% "Actor_pers")
+
+for (.slice in as.character(slices)) {
+  net_slice <- as_igraph_net_slice(dynamic_net = dyn_net, v_name_attr = "Actor_pers", slice = as.numeric(.slice), retain_vertices = TRUE)
+  #net_slice <- simplify(net_slice, remove.multiple = TRUE, remove.loops = TRUE)
+  #net_slice <- delete.vertices(net_slice, degree(net_slice)==0)
+  alphacent_stats[[.slice]] <- alpha_centrality(net_slice, alpha = 0.1)
+  } 
+colnames(alphacent_stats)[1] <- "actor_name"
+
+rio::export(alphacent_stats, file = paste0(export_path,"alpha_centrality_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.csv"))
 
 
 # Create dynamic network objects
@@ -350,7 +495,6 @@ outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, 
 eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 
-
 #directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
 undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = FALSE)
 
@@ -467,3 +611,38 @@ for (stat in stats_to_export[stats_to_export!="net_stats"]) {
 }
 
 write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
+
+
+
+## Export overall degree centrality results
+
+degree_data <- degree[nrow(degree),]
+
+degree_data <- as.data.frame(degree_data)
+
+# create actor labels to display on the visualisation
+degree_data$labels <- NA
+actors_to_label <- c("Rousseau", "Mercure", "Ann?e litt?raire", "Rolland d'Erceville")
+percentages <- c("(16.7%)", "(8.6%)", "(11.4%)", "(9.6%)")
+
+for (i in seq_along(actors_to_label)) {
+  degree_data[actors_to_label[i],"labels"] <- paste0(actors_to_label[i], " ", percentages[i])
+}
+
+ggplot(data = degree_data,
+       aes(x = degree_data)) +
+  geom_histogram(binwidth = 1, fill = "#FF776C", col = "black") +
+  geom_label(data = degree_data[!is.na(degree_data$labels),], mapping = aes(x = degree_data, y = c(2, 2, 4, 3), label = labels, hjust = c(0.7, 0.5, 0.5, 0.5)), size = 15) +
+  labs(x = "Degree centrality", y = "Number of nodes") +
+  theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
+  scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60)) +
+  theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt"))
+
+
+# Export vis
+
+vis <- recordPlot()
+Cairo(file = paste0(export_path, "Degree_centrality_", text_or_pers, "_network_node_labels.png"), width = 2400, height = 1800, type = "png", bg = "white")
+print(vis)
+dev.off()
+
