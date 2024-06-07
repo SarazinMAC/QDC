@@ -16,6 +16,7 @@ library(networkDynamic)
 Data_name <- "QDC_2024_05_13.xlsx"
 #Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 Data_path <- "D:\\Git Repos\\QDC\\"
+Data_name <- "QDC_2024_06_07.xlsx"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
 
@@ -928,7 +929,6 @@ render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE)
 
 ## Trying to make it less bunched
 
-QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 #QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -986,7 +986,6 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
                                main="Querelle des collèges, 1762-1789",
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
 #                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
                                xlab = year_label,
                                vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
@@ -998,8 +997,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_05_16.html",
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_05.html",
+                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_07.html",
                verbose=TRUE)
 
 
@@ -1314,7 +1312,7 @@ for (char in chars[,1]) {
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17640
+end <- 17899
 
 # Calculate animation
 #QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
@@ -1337,10 +1335,6 @@ for (i in seq(from = start,to = end, by=1)) {
 
 ## Recreating the network with new process (as of 2024-02-17)
 
-year_label <- function(s){
-  paste(trunc((QDC_text_anim$gal$slice.par$start+
-                 QDC_text_anim$gal$slice.par$interval*s-1)/10))
-  }
 # Note: year_label function has been moved to top of file
 
 
@@ -1349,7 +1343,7 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_colours_refactored_testing.html"
+filename <- "QDC_text_with_pre_QdC_colours_refactored_2024_06_05.html"
 
 render.d3movie(QDC_text_anim2,
 #render.d3movie(QDC_text_anim,
