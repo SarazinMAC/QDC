@@ -976,31 +976,7 @@ year_label <- function(s){
                  QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
 }
 
-
-render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
-               plot.par = list(bg="white",
-                               #               render.par=list(tween.frames=100, show.time= FALSE),
-                               vertex.border="#ffffff",
-                               vertex.col = "Type_col",
-                               #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
-                               main="Querelle des coll?ges, 1762-1789",
-                               #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
-                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-                               #               vertex.cex = 0.8,
-                               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
-                               edge.lwd = 2,
-                               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_pers_dyn %v% 'vertex.names')
-                               edge.tooltip = function(slice){slice %e% 'Tie_name_fix'},
-                               edge.col = "Qual_col", usearrows=TRUE),
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-#               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
-#               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed_lessBunched_version3.html",
-#               launchBrowser=TRUE, filename="Final position.html",
-               verbose=TRUE)
-
-
-save(list = c("QDC_pers_anim2", "QDC_pers_anim_final"), file = "2022.11.10 - QDC_pers_degree_slider_fixed_lessBunched_version3.RData")
+filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_09_testing.html"
 
 ## Creating ndtv visual without base network specified
 
