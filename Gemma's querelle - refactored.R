@@ -13,8 +13,8 @@ library(networkDynamic)
 
 # Configurable values
 
-Data_name <- "QDC_2024_05_13.xlsx"
 #Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
+Data_name <- "QDC_2024_06_07.xlsx"
 Data_path <- "D:\\Git_Repos\\QDC\\"
 
 # Do you want to use slices (i.e. years * 10) or original years in Dynamic network?
@@ -290,6 +290,12 @@ create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, Text_or_pers_name, 
   return(vs_df)
 }
 
+# TODO: Introduce if function to make code adaptable to text or pers network, and delete pers version below
+
+year_label <- function(s){
+  paste(trunc((QDC_text_anim$gal$slice.par$start+
+                 QDC_text_anim$gal$slice.par$interval*s-1)/10))
+}
 
 
 
@@ -554,7 +560,7 @@ QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 
 
-.
+
 
 
 
@@ -795,7 +801,7 @@ QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vi
 
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
 
-QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:6], edge.spells = QDC_es_dynamic_vis[,c("onset", "terminus", "Actor_code", "Tie_code", "Qual_col")], create.TEAs = TRUE)
+QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis, edge.spells = QDC_es_dynamic_vis[,c("onset", "terminus", "Actor_code", "Tie_code", "Qual_col")], create.TEAs = TRUE)
 
 #reconcile.vertex.activity(QDC_pers_dyn, mode = "expand.to.edges", edge.active.default = FALSE)
 
@@ -834,13 +840,27 @@ QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis,
                                                      Text_or_pers_name = "Pers_Name",
                                                      actor_colname = "Actor_pers")
 
+
+##### CORRIGER les accents etc.
+
+chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
+
+## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
+for (char in chars[,1]) {
+  QDC_vs_dynamic_vis_attr$Actor_pers <- gsub(char, chars[which(chars$Character==char),"R_HTML"], QDC_vs_dynamic_vis_attr$Actor_pers)
+}; rm(char)
+
+
 # loop over vertex data to add the dynamic attributes on the vertices
 for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
   activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'vertex_colour',
                             value = QDC_vs_dynamic_vis_attr$vertex_colour[row],
                             onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
-  
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'Actor_pers_name',
+                            value = QDC_vs_dynamic_vis_attr$Actor_pers[row],
+                            onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
+                            v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
 
@@ -891,18 +911,6 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
 }
 
 
-##### CORRIGER les accents etc.
-
-chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
-
-## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
-for (char in chars[,1]) {
-  QDC_pers_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "vertex.names")
-  QDC_pers_dyn %v% "Pers_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_pers_dyn %v% "Pers_Name")
-  
-}; rm(char)
-
-
 
 ### Make animation
 #compute.animation(QDC_pers_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
@@ -947,7 +955,7 @@ render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE)
 
 ## Trying to make it less bunched
 
-QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 #QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
@@ -961,6 +969,11 @@ for (i in seq(from = start,to = end+1, by=1)) {
 
 for (i in seq(from = start,to = end+1, by=1)) {
   activate.vertex.attribute(QDC_pers_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.y", at = i))/3.2)
+}
+
+year_label <- function(s){
+  paste(trunc((QDC_pers_anim2$gal$slice.par$start+
+                 QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
 }
 
 
@@ -999,16 +1012,18 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
                                main="Querelle des collèges, 1762-1789",
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+#                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
+                               xlab = year_label,
                                vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
                                edge.lwd = 2,
-                               vertex.tooltip = function(slice){paste0(slice %v% 'Pers_Name')}, #(QDC_pers_dyn %v% 'vertex.names')
+                               vertex.tooltip = function(slice){paste0(slice %v% 'Actor_pers_name')}, 
+#                               vertex.tooltip = QDC_pers_anim2 %v% 'Pers_Name', 
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_05_16.html",
+                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_07.html",
                verbose=TRUE)
 
 
@@ -1318,15 +1333,17 @@ for (char in chars[,1]) {
 }; rm(char)
 
 
-##### TESTING - I am testing here #####
+##### Create dynamic visual #####
 
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
 start <- 17619
-end <- 17640
+end <- 17899
 
-# testing line
-QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+# Calculate animation
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+# Trying to change aggregation_dur
+QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 #QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
@@ -1344,17 +1361,15 @@ for (i in seq(from = start,to = end, by=1)) {
 
 ## Recreating the network with new process (as of 2024-02-17)
 
-year_label <- function(s){
-  paste(trunc((QDC_text_anim$gal$slice.par$start+
-                 QDC_text_anim$gal$slice.par$interval*s)/10))
-  }
+# Note: year_label function has been moved to top of file
+
 
 node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/
                                 (sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
   }
 
-filename <- "QDC_text_with_pre_QdC_colours_refactored_testing.html"
+filename <- "QDC_text_with_pre_QdC_colours_refactored_2024_06_05.html"
 
 render.d3movie(QDC_text_anim2,
 #render.d3movie(QDC_text_anim,
@@ -1370,7 +1385,7 @@ render.d3movie(QDC_text_anim2,
                xlab = year_label,
                vertex.cex = node_size,
                usearrows=TRUE,
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+               d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
                output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 

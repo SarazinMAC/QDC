@@ -510,10 +510,8 @@ degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end
 indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
 
-
-eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7)
-eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e6)
-
+eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
+eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 
 #directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
 undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = FALSE)
@@ -644,6 +642,7 @@ degree_data <- degree_data[nrow(degree_data),]
 degree_data <- as.data.frame(degree_data)
 
 # create actor labels to display on the visualisation
+<<<<<<< HEAD
 if (measure=="degree") {
   actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville")
   actor_labels <- c("Rousseau (16.7%)", " Mercure (8.6%)", " Année\nlittéraire (11.4%)", "Rolland\nd'Erceville (9.6%)")
