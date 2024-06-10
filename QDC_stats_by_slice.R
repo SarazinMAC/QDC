@@ -642,7 +642,6 @@ degree_data <- degree_data[nrow(degree_data),]
 degree_data <- as.data.frame(degree_data)
 
 # create actor labels to display on the visualisation
-<<<<<<< HEAD
 if (measure=="degree") {
   actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville")
   actor_labels <- c("Rousseau (16.7%)", " Mercure (8.6%)", " Année\nlittéraire (11.4%)", "Rolland\nd'Erceville (9.6%)")
