@@ -179,13 +179,21 @@ for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
-## Set weights as dynamic edge attribute
+## Set weights and tie colour as dynamic edge attributes
+
+# Fix Qual_col for pre-QdC edges
+
+QDC_es$Qual_col_inc_pre_qdc <- QDC_es$Qual_col
+QDC_es$Qual_col_inc_pre_qdc[QDC_es$Qual_col_inc_pre_qdc=="grey90"] <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", 
+                                                                        "orange", "grey61", "grey61", "grey15")[QDC_es$Quality[QDC_es$Qual_col_inc_pre_qdc=="grey90"]]
 
 for(row in 1:nrow(QDC_es)){
   # get the id of the edge from its tail and head
   edge_id <- get.edgeIDs(dyn_net,v=QDC_es$Actor_code[row],
                          alter=QDC_es$Tie_code[row])
   activate.edge.attribute(dyn_net,'edge_weights',QDC_es$edge_weights[row],
+                          onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
+  activate.edge.attribute(dyn_net,'Qual_col',QDC_es$Qual_col_inc_pre_qdc[row],
                           onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
 }
 
@@ -328,7 +336,7 @@ dev.off()
 
 # Combine community structures into one adjacency matrix per slice
 
-slice_to_extract <- "17635"
+slice_to_extract <- "17634"
 
 slice_memberships_combined <- lapply(all_memberships_combined, function(second_order_list) { second_order_list[[slice_to_extract]]})
 # Record the number of times that particular membership results have occurred, and export the visual 
@@ -359,14 +367,15 @@ for (membership in membership_by_count) {
   slice_to_plot <- asIgraph(slice_to_plot)
   V(slice_to_plot)$name <- vertex_attr(slice_to_plot, "Actor_pers")
   E(slice_to_plot)$weight <- edge_attr(slice_to_plot, "edge_weights")
-  slice_to_plot <- simplify(slice_to_plot, remove.loops = TRUE)
+  slice_to_plot <- delete_edges(slice_to_plot, which(which_loop(slice_to_plot)))
 #  slice_to_plot <- as.undirected(slice_to_plot, mode = "collapse")
   
   plot(x = communities_to_plot, y = slice_to_plot,
        vertex.label = V(slice_to_plot)$Actor_pers,
        edge.arrow.size = 0.2,
        edge.lty = c("solid", "longdash")[crossing(communities_to_plot, slice_to_plot) + 1],
-       edge.width = E(slice_to_plot)$weight*2
+       edge.width = E(slice_to_plot)$weight*2,
+       edge.color = E(slice_to_plot)$Qual_col
        )
   title(slice_to_extract, cex.main = 3)
   vis <- recordPlot()
