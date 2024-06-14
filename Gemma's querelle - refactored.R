@@ -869,6 +869,33 @@ for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
+# loop over edge spells to add vertex attribute for number of repeat data
+
+n_multiple_ties_df_senders <- QDC_es_dynamic_vis[, c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")]
+n_multiple_ties_df_receivers <- QDC_es_dynamic_vis[, c("onset", "terminus", "Tie_code", "edge_weights", "TIE-PERSON")]
+colnames(n_multiple_ties_df_receivers) <- c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")
+n_multiple_ties_df <- rbind(n_multiple_ties_df_senders, n_multiple_ties_df_receivers)
+n_multiple_ties_df$`ACTOR-PERSON`=NULL
+n_multiple_ties_df_isolates <- QDC_vs_dynamic_vis[!(QDC_vs_dynamic_vis$Actor_code %in% n_multiple_ties_df$Actor_code), c("onset", "terminus", "Actor_code")]
+n_multiple_ties_df_isolates$edge_weights <- 1
+n_multiple_ties_df <- rbind(n_multiple_ties_df, n_multiple_ties_df_isolates)
+#n_multiple_ties_df <- unique(n_multiple_ties_df)
+# remove cases where multiple n_multiple_ties values appear in a slice - keep the largest value
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset, n_multiple_ties_df$Actor_code, -n_multiple_ties_df$edge_weights),]
+n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df
+                                                     [, c("onset", "terminus", "Actor_code")]),]
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset),]
+
+n_multiple_ties_df$edge_weights <- n_multiple_ties_df$edge_weights-1
+
+for(row in 1:nrow(n_multiple_ties_df)){
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'n_multiple_ties',
+                            value = (n_multiple_ties_df$edge_weights[row]),
+                            onset=n_multiple_ties_df$onset[row],terminus=n_multiple_ties_df$terminus[row],
+                            v=n_multiple_ties_df$Actor_code[row])
+}
+
+
 
 # Add Dynamic edge attributes
 
@@ -1001,7 +1028,11 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
 #                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
                                xlab = year_label,
-                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+#                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+                                vertex.cex = function(slice){
+                                degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "n_multiple_ties")*10
+                                (10*(degree_value + 0.000001)/(degree_value + 0.000001)*(log(((degree_value+5)/100)+1)))
+                              },
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
 #                               edge.lwd = function(slice){log((slice %e% 'edge_weights')+1)*2},
