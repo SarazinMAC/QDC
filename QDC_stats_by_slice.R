@@ -179,13 +179,21 @@ for (col in colnames(attr_dyn_df)) {
   dyn_net %v% col <- attr_dyn_df[[col]]
 }
 
-## Set weights as dynamic edge attribute
+## Set weights and tie colour as dynamic edge attributes
+
+# Fix Qual_col for pre-QdC edges
+
+QDC_es$Qual_col_inc_pre_qdc <- QDC_es$Qual_col
+QDC_es$Qual_col_inc_pre_qdc[QDC_es$Qual_col_inc_pre_qdc=="grey90"] <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", 
+                                                                        "orange", "grey61", "grey61", "grey15")[QDC_es$Quality[QDC_es$Qual_col_inc_pre_qdc=="grey90"]]
 
 for(row in 1:nrow(QDC_es)){
   # get the id of the edge from its tail and head
   edge_id <- get.edgeIDs(dyn_net,v=QDC_es$Actor_code[row],
                          alter=QDC_es$Tie_code[row])
   activate.edge.attribute(dyn_net,'edge_weights',QDC_es$edge_weights[row],
+                          onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
+  activate.edge.attribute(dyn_net,'Qual_col',QDC_es$Qual_col_inc_pre_qdc[row],
                           onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
 }
 
@@ -198,7 +206,7 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-slices <- c(17634, 17635)
+#slices <- c(17634, 17635)
 all_community_sizes <- list()
 
 all_community_stats_combined <- list()
@@ -220,7 +228,11 @@ for (.slice in slices){
   net_slice <- simplify(net_slice, remove.loops = TRUE)
   net_slice <- as.undirected(net_slice, mode = "collapse")
   communities <- cluster_louvain(net_slice)
-#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 3)
+  # Check whether running Leiden as iteration after Louvain produces different results
+#  membership <- membership(communities)
+#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 10, initial_membership = membership)
+  # Run Leiden algorithm from the start
+#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 20)
   all_communities[[as.character(.slice)]] <- communities
   all_memberships[[as.character(.slice)]] <- membership(communities)
   if (plot) {
@@ -324,11 +336,13 @@ dev.off()
 
 # Combine community structures into one adjacency matrix per slice
 
+slice_to_extract <- "17634"
 
+slice_memberships_combined <- lapply(all_memberships_combined, function(second_order_list) { second_order_list[[slice_to_extract]]})
 # Record the number of times that particular membership results have occurred, and export the visual 
 
 # Flatten the list of lists into a single list of strings
-membership_strings <- unlist(lapply(all_memberships_combined, function(x) toString(unlist(x))))
+membership_strings <- unlist(lapply(slice_memberships_combined, function(x) toString(unlist(x))))
 
 # Count the number of times each unique string appears
 membership_counts <- table(membership_strings)
@@ -348,13 +362,25 @@ for (membership in membership_by_count) {
   
   community <- which(membership_strings==membership)[1]
   
-  communities_to_plot <- all_communities_combined[[community]][[1]]
-  plot(x = communities_to_plot, y = net_slice,
-       vertex.label = V(net_slice)$Actor_pers)
-  title(.slice, cex.main = 3)
+  communities_to_plot <- all_communities_combined[[community]][[slice_to_extract]]
+  slice_to_plot <- network.collapse(dyn_net, at = as.numeric(slice_to_extract), rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
+  slice_to_plot <- asIgraph(slice_to_plot)
+  V(slice_to_plot)$name <- vertex_attr(slice_to_plot, "Actor_pers")
+  E(slice_to_plot)$weight <- edge_attr(slice_to_plot, "edge_weights")
+  slice_to_plot <- delete_edges(slice_to_plot, which(which_loop(slice_to_plot)))
+#  slice_to_plot <- as.undirected(slice_to_plot, mode = "collapse")
+  
+  plot(x = communities_to_plot, y = slice_to_plot,
+       vertex.label = V(slice_to_plot)$Actor_pers,
+       edge.arrow.size = 0.2,
+       edge.lty = c("solid", "longdash")[crossing(communities_to_plot, slice_to_plot) + 1],
+       edge.width = E(slice_to_plot)$weight*2,
+       edge.color = E(slice_to_plot)$Qual_col
+       )
+  title(slice_to_extract, cex.main = 3)
   vis <- recordPlot()
   
-  Cairo(file = paste0(export_path, "Communities_", .slice, "_likelihood_", membership_prob, "_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
+  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_leiden_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
   print(vis)
   dev.off()
 }
@@ -485,9 +511,10 @@ transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end =
 components_weak <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
 components_unilateral <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "unilateral")
 
-degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
-indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
-outdegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+#TODO: Check if diag=TRUE works with text network
+degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, diag=TRUE)
+indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree", diag=TRUE)
+outdegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree", diag=TRUE)
 degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
 indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
 outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
@@ -614,35 +641,59 @@ write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_o
 
 
 
-## Export overall degree centrality results
+## Export overall degree/outdegree centrality results
 
-degree_data <- degree[nrow(degree),]
+measure <- "degree"
+
+degree_data <- get(measure)
+degree_data <- degree_data[nrow(degree_data),]
 
 degree_data <- as.data.frame(degree_data)
 
 # create actor labels to display on the visualisation
-degree_data$labels <- NA
-actors_to_label <- c("Rousseau", "Mercure", "Ann?e litt?raire", "Rolland d'Erceville")
-percentages <- c("(16.7%)", "(8.6%)", "(11.4%)", "(9.6%)")
-
-for (i in seq_along(actors_to_label)) {
-  degree_data[actors_to_label[i],"labels"] <- paste0(actors_to_label[i], " ", percentages[i])
+if (measure=="degree") {
+  actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville")
+  actor_labels <- c("Rousseau (16.7%)", " Mercure (8.6%)", " Année\nlittéraire (11.4%)", "Rolland\nd'Erceville (9.6%)")
+  # TODO: Change this so that label_y_position is used below as configurable value, also hjust, remember to change order of values
+#  label_y_position <- c(2, 5.5, 4, 2)
+} else if (measure=="outdegree") {
+  actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville", "Borrelly", "Rivard")
+  actor_labels <- c("Rousseau (0%)", "Mercure (8.4%)", "Année\nlittéraire (10.6%)", "Rolland\nd'Erceville (8.9%)", "Borrelly (5.3%)", "Rivard (7.6%)")
+#  label_y_position <- 1
 }
 
+degree_data$labels <- NA
+for (i in seq_along(actors_to_label)) {
+  degree_data[actors_to_label[i],"labels"] <- paste0(actor_labels[i])
+  degree_data[actors_to_label[i],"hjust"] <- paste0(hjust[i])
+}
+
+if (measure=="degree") {
+  
 ggplot(data = degree_data,
        aes(x = degree_data)) +
   geom_histogram(binwidth = 1, fill = "#FF776C", col = "black") +
-  geom_label(data = degree_data[!is.na(degree_data$labels),], mapping = aes(x = degree_data, y = c(2, 2, 4, 3), label = labels, hjust = c(0.7, 0.5, 0.5, 0.5)), size = 15) +
+  geom_label(data = degree_data[!is.na(degree_data$labels),], mapping = aes(x = degree_data, y =  c(2, 5.5, 4, 2), label = labels, hjust = c(0.7, 0.5, 0.5, 0.5)), size = 15) +
   labs(x = "Degree centrality", y = "Number of nodes") +
   theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
   scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60)) +
   theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt"))
-
+} else if (measure=="outdegree") {
+  
+  ggplot(data = degree_data,
+         aes(x = degree_data)) +
+    geom_histogram(binwidth = 1, fill = "#FF776C", col = "black") +
+    geom_label(data = degree_data[!is.na(degree_data$labels),], mapping = aes(x = degree_data, y =  c(7.5, 2, 6, 4, 2, 2.5), label = labels, hjust = c(0.5, 0.4, 0.5, 0.5, 0.5, 0.5)), size = 15) +
+    labs(x = "Degree centrality", y = "Number of nodes") +
+    theme(axis.title = element_text(size = 50), axis.text = element_text(size = 50)) +
+    scale_x_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60)) +
+    theme(plot.margin = unit(c(15, 15, 15, 15), units = "pt"))
+}
 
 # Export vis
 
 vis <- recordPlot()
-Cairo(file = paste0(export_path, "Degree_centrality_", text_or_pers, "_network_node_labels.png"), width = 2400, height = 1800, type = "png", bg = "white")
+Cairo(file = paste0(export_path, measure, "_centrality_", text_or_pers, "_network_node_labels.png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
 
