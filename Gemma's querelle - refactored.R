@@ -293,8 +293,13 @@ create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, Text_or_pers_name, 
 # TODO: Introduce if function to make code adaptable to text or pers network, and delete pers version below
 
 year_label <- function(s){
+  if (QDC_text_anim$gal$slice.par$start < 17620 & QDC_text_anim$gal$slice.par$start > 10000 & 
+      s==1) {
+    "Pre-1762"
+  } else {
   paste(trunc((QDC_text_anim$gal$slice.par$start+
                  QDC_text_anim$gal$slice.par$interval*s-1)/10))
+  }
 }
 
 
@@ -972,11 +977,16 @@ for (i in seq(from = start,to = end+1, by=1)) {
 }
 
 year_label <- function(s){
-  paste(trunc((QDC_pers_anim2$gal$slice.par$start+
-                 QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
+  if (QDC_pers_anim2$gal$slice.par$start < 17620 & QDC_pers_anim2$gal$slice.par$start > 10000 & 
+      s==1) {
+    "Pre-1762"
+  } else {
+    paste(trunc((QDC_pers_anim2$gal$slice.par$start+
+                   QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
+  }
 }
 
-filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_09_testing.html"
+filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_13_testing.html"
 
 ## Creating ndtv visual without base network specified
 
