@@ -1011,7 +1011,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_07.html",
+                               launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
 
