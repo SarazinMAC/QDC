@@ -5,6 +5,7 @@ library(statnet.common)
 library(network)
 library(ndtv)
 library(networkDynamic)
+library(dplyr)
 
 #detach("package:ndtv", unload=TRUE)
 #detach("package:networkDynamic", unload=TRUE)
@@ -720,17 +721,17 @@ text_to_person_mapper <- rbind(text_to_person_mapper, pers_to_person_mapper)
 #rm(xx, xxx)
 
 colnames(text_to_person_mapper) <- c("ACTOR-TEXT", "ACTOR-PERSON")
-QDC_es$`TIE-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_es$`ACTOR-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
-QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
+QDC_es$`TIE-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_es$`ACTOR-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-PERSON`), QDC_vs$Actor_pers)]
+QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-PERSON`), QDC_vs$Actor_pers)]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-PERSON","TIE-PERSON","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
 
-QDC_pre_62_edges$`TIE-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_pre_62_edges$`ACTOR-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_pre_62_edges[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
-QDC_pre_62_edges[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
+QDC_pre_62_edges$`TIE-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_pre_62_edges$`ACTOR-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_pre_62_edges[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`ACTOR-PERSON`), QDC_vs$Actor_pers)]
+QDC_pre_62_edges[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`TIE-PERSON`), QDC_vs$Actor_pers)]
+QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_code","ACTOR-PERSON","TIE-PERSON","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
 
 
 # Try using the mapper on QDC_vs_text_dyn
@@ -746,10 +747,10 @@ rm(text_to_person_mapper)
 
 ## The following is just to remove ambiguity with variable names
 
-colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
-colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
+#colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
+#colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
+#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
+#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
 
 # Need to replace QdC_vs with a text version for now
 
