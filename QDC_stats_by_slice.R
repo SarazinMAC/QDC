@@ -529,13 +529,12 @@ transitivity <- tSnaStats(QDC_dyn, snafun = "gtrans", start = start_slice, end =
 components_weak <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "weak")
 components_unilateral <- tSnaStats(QDC_dyn, snafun = "components", start = start_slice, end = end_slice, time.interval = slice_interval, connected = "unilateral")
 
-#TODO: Check if diag=TRUE works with text network
 degree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, diag=TRUE)
 indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree", diag=TRUE)
 outdegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree", diag=TRUE)
-degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval)
-indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree")
-outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree")
+degree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, diag=TRUE)
+indegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="indegree", diag=TRUE)
+outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree", diag=TRUE)
 
 eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
@@ -564,11 +563,6 @@ net_stats$prop_ties_sent_to_rousseau <- Rousseau_indegree/net_stats$edges
 Rousseau_indegree_neg <- indegree_neg[, grepl("Rousseau", colnames(indegree_neg))]
 net_stats_neg$prop_neg_ties_sent_to_rousseau <- Rousseau_indegree_neg/net_stats$edges 
 
-
-# Try to calculate local transitivity/clustering coefficient
-
-#extracts <- network.extract(QDC_dyn, at = 17620, rule = "any", active.default = FALSE)
-#extracts <- intergraph::asIgraph(extracts)
 
 # Largest receivers/senders of ties
 
@@ -655,13 +649,13 @@ for (stat in stats_to_export[stats_to_export!="net_stats"]) {
   stats_list_transposed[[stat]] <- stats_transposed
 }
 
-write_xlsx(stats_list_transposed, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
+export(stats_list_transposed, file = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
 
 
 
 ## Export overall degree/outdegree centrality results
 
-measure <- "degree"
+measure <- "outdegree"
 
 degree_data <- get(measure)
 degree_data <- degree_data[nrow(degree_data),]
