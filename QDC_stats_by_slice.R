@@ -361,8 +361,22 @@ for (membership in membership_by_count) {
   membership_prob <- membership_probs[which(names(membership_probs)==membership)]
   
   community <- which(membership_strings==membership)[1]
-  
   communities_to_plot <- all_communities_combined[[community]][[slice_to_extract]]
+  # set consistent colours for communities, based on presence of key actors ("community_leaders")
+  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvétius", "Pellicier", "Pluche", "Louis XV", "Daragon")
+  
+  communities_to_plot_members <- membership(communities_to_plot)
+  community_leaders_communities <- communities_to_plot_members[community_leaders]
+  colours <- rep(categorical_pal(8), 2)[seq_along(community_leaders)]
+  colours_node <- rep(NA, length(communities_to_plot_members))
+  for (i in seq_along(community_leaders)) {
+    colours_node <- ifelse(communities_to_plot_members==community_leaders_communities[i], colours[i], colours_node)
+  }
+  # Thought I needed to set community colours, but apparently they are linked to the node colours
+#  colours_comm <- rainbow(10, alpha = 0.3)[community_leaders_communities]
+#  colours_borders <- rainbow(10, alpha = 1)[community_leaders_communities]
+
+  # Plot visual
   slice_to_plot <- network.collapse(dyn_net, at = as.numeric(slice_to_extract), rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
   slice_to_plot <- asIgraph(slice_to_plot)
   V(slice_to_plot)$name <- vertex_attr(slice_to_plot, "Actor_pers")
@@ -374,8 +388,12 @@ for (membership in membership_by_count) {
        vertex.label = V(slice_to_plot)$Actor_pers,
        edge.arrow.size = 0.2,
        edge.lty = c("solid", "longdash")[crossing(communities_to_plot, slice_to_plot) + 1],
-       edge.width = E(slice_to_plot)$weight*2,
-       edge.color = E(slice_to_plot)$Qual_col
+       edge.width = E(slice_to_plot)$weight*2.5,
+       edge.color = E(slice_to_plot)$Qual_col,
+       col = colours_node,
+       # No need to set community colours
+#       mark.col = colours_comm,
+#       mark.border = colours_borders
        )
   title(slice_to_extract, cex.main = 3)
   vis <- recordPlot()
