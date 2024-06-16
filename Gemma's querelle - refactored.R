@@ -5,6 +5,7 @@ library(statnet.common)
 library(network)
 library(ndtv)
 library(networkDynamic)
+library(dplyr)
 
 #detach("package:ndtv", unload=TRUE)
 #detach("package:networkDynamic", unload=TRUE)
@@ -293,8 +294,13 @@ create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, Text_or_pers_name, 
 # TODO: Introduce if function to make code adaptable to text or pers network, and delete pers version below
 
 year_label <- function(s){
+  if (QDC_text_anim$gal$slice.par$start < 17620 & QDC_text_anim$gal$slice.par$start > 10000 & 
+      s==1) {
+    "Pre-1762"
+  } else {
   paste(trunc((QDC_text_anim$gal$slice.par$start+
                  QDC_text_anim$gal$slice.par$interval*s-1)/10))
+  }
 }
 
 
@@ -715,17 +721,17 @@ text_to_person_mapper <- rbind(text_to_person_mapper, pers_to_person_mapper)
 #rm(xx, xxx)
 
 colnames(text_to_person_mapper) <- c("ACTOR-TEXT", "ACTOR-PERSON")
-QDC_es$`TIE-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_es$`ACTOR-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
-QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
+QDC_es$`TIE-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_es$`ACTOR-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_es[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`ACTOR-PERSON`), QDC_vs$Actor_pers)]
+QDC_es[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_es$`TIE-PERSON`), QDC_vs$Actor_pers)]
+QDC_es <- QDC_es[, c("onset","terminus","Actor_code","Tie_code","ACTOR-PERSON","TIE-PERSON","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
 
-QDC_pre_62_edges$`TIE-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_pre_62_edges$`ACTOR-TEXT` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
-QDC_pre_62_edges[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), QDC_vs$Actor_pers)]
-QDC_pre_62_edges[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), QDC_vs$Actor_pers)]
-QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_code","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
+QDC_pre_62_edges$`TIE-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_pre_62_edges$`ACTOR-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_pre_62_edges$`ACTOR-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
+QDC_pre_62_edges[, "Actor_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`ACTOR-PERSON`), QDC_vs$Actor_pers)]
+QDC_pre_62_edges[, "Tie_code"] <- QDC_vs$Actor_code[match(unlist(QDC_pre_62_edges$`TIE-PERSON`), QDC_vs$Actor_pers)]
+QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_code","ACTOR-PERSON","TIE-PERSON","ACTOR-TEXT","TIE-TEXT", "Tie_name", "Quality", "Qual_col", "sent_to_rousseau", "order")]
 
 
 # Try using the mapper on QDC_vs_text_dyn
@@ -741,10 +747,10 @@ rm(text_to_person_mapper)
 
 ## The following is just to remove ambiguity with variable names
 
-colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
-colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
+#colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
+#colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
+#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
+#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
 
 # Need to replace QdC_vs with a text version for now
 
@@ -863,6 +869,33 @@ for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
+# loop over edge spells to add vertex attribute for number of repeat data
+
+n_multiple_ties_df_senders <- QDC_es_dynamic_vis[, c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")]
+n_multiple_ties_df_receivers <- QDC_es_dynamic_vis[, c("onset", "terminus", "Tie_code", "edge_weights", "TIE-PERSON")]
+colnames(n_multiple_ties_df_receivers) <- c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")
+n_multiple_ties_df <- rbind(n_multiple_ties_df_senders, n_multiple_ties_df_receivers)
+n_multiple_ties_df$`ACTOR-PERSON`=NULL
+n_multiple_ties_df_isolates <- QDC_vs_dynamic_vis[!(QDC_vs_dynamic_vis$Actor_code %in% n_multiple_ties_df$Actor_code), c("onset", "terminus", "Actor_code")]
+n_multiple_ties_df_isolates$edge_weights <- 1
+n_multiple_ties_df <- rbind(n_multiple_ties_df, n_multiple_ties_df_isolates)
+#n_multiple_ties_df <- unique(n_multiple_ties_df)
+# remove cases where multiple n_multiple_ties values appear in a slice - keep the largest value
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset, n_multiple_ties_df$Actor_code, -n_multiple_ties_df$edge_weights),]
+n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df
+                                                     [, c("onset", "terminus", "Actor_code")]),]
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset),]
+
+n_multiple_ties_df$edge_weights <- n_multiple_ties_df$edge_weights-1
+
+for(row in 1:nrow(n_multiple_ties_df)){
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'n_multiple_ties',
+                            value = (n_multiple_ties_df$edge_weights[row]),
+                            onset=n_multiple_ties_df$onset[row],terminus=n_multiple_ties_df$terminus[row],
+                            v=n_multiple_ties_df$Actor_code[row])
+}
+
+
 
 # Add Dynamic edge attributes
 
@@ -972,35 +1005,16 @@ for (i in seq(from = start,to = end+1, by=1)) {
 }
 
 year_label <- function(s){
-  paste(trunc((QDC_pers_anim2$gal$slice.par$start+
-                 QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
+  if (QDC_pers_anim2$gal$slice.par$start < 17620 & QDC_pers_anim2$gal$slice.par$start > 10000 & 
+      s==1) {
+    "Pre-1762"
+  } else {
+    paste(trunc((QDC_pers_anim2$gal$slice.par$start+
+                   QDC_pers_anim2$gal$slice.par$interval*s-1)/10))
+  }
 }
 
-
-render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
-               plot.par = list(bg="white",
-                               #               render.par=list(tween.frames=100, show.time= FALSE),
-                               vertex.border="#ffffff",
-                               vertex.col = "Type_col",
-                               #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
-                               main="Querelle des coll?ges, 1762-1789",
-                               #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
-                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-                               #               vertex.cex = 0.8,
-                               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
-                               edge.lwd = 2,
-                               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_pers_dyn %v% 'vertex.names')
-                               edge.tooltip = function(slice){slice %e% 'Tie_name_fix'},
-                               edge.col = "Qual_col", usearrows=TRUE),
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-#               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
-#               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed_lessBunched_version3.html",
-#               launchBrowser=TRUE, filename="Final position.html",
-               verbose=TRUE)
-
-
-save(list = c("QDC_pers_anim2", "QDC_pers_anim_final"), file = "2022.11.10 - QDC_pers_degree_slider_fixed_lessBunched_version3.RData")
+filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_13_testing.html"
 
 ## Creating ndtv visual without base network specified
 
@@ -1014,16 +1028,21 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
 #                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
                                xlab = year_label,
-                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+#                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
+                                vertex.cex = function(slice){
+                                degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "n_multiple_ties")*10
+                                (10*(degree_value + 0.000001)/(degree_value + 0.000001)*(log(((degree_value+5)/100)+1)))
+                              },
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
-                               edge.lwd = 2,
+#                               edge.lwd = function(slice){log((slice %e% 'edge_weights')+1)*2},
+                               edge.lwd = function(slice){(log(slice %e% 'edge_weights')*2)+1},
                                vertex.tooltip = function(slice){paste0(slice %v% 'Actor_pers_name')}, 
 #                               vertex.tooltip = QDC_pers_anim2 %v% 'Pers_Name', 
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-                               launchBrowser=TRUE, filename="QDC_pers_with_pre_QDC_ties_corrected_2024_06_07.html",
+                               launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
 
