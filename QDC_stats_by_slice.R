@@ -206,8 +206,10 @@ slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 plot <- FALSE
 
-#slices <- c(17634, 17635)
+slices <- c(17634, 17635)
 all_community_sizes <- list()
+
+cd_algorithm <- "Louvain"
 
 all_community_stats_combined <- list()
 all_communities_combined <- list()
@@ -227,12 +229,16 @@ for (.slice in slices){
   # Remove loops because they influence community detection algorithm
   net_slice <- simplify(net_slice, remove.loops = TRUE)
   net_slice <- as.undirected(net_slice, mode = "collapse")
-  communities <- cluster_louvain(net_slice)
+  if (cd_algorithm == "Louvain") {
+    communities <- cluster_louvain(net_slice) 
+  } else if (cd_algorithm == "Leiden") {
+    communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 20)
+  } else {
+    stop(paste0(cd_algorithm, " is an invalid community detection algorithm! Valid values are 'Louvain' and 'Leiden'"))
+  }
   # Check whether running Leiden as iteration after Louvain produces different results
 #  membership <- membership(communities)
 #  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 10, initial_membership = membership)
-  # Run Leiden algorithm from the start
-#  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 20)
   all_communities[[as.character(.slice)]] <- communities
   all_memberships[[as.character(.slice)]] <- membership(communities)
   if (plot) {
@@ -243,17 +249,28 @@ for (.slice in slices){
   }
   community_sizes <- sizes(communities)
   all_community_sizes[[as.character(.slice)]] <- community_sizes
-  community_stats <- c("slice" = .slice,
+  if (cd_algorithm == "Louvain") {
+    community_stats <- c("slice" = .slice,
                        "N_communities" = length(communities),
                        "net_modularity" = modularity(communities),
-#                       "net_modularity" = communities$quality,
                        "min_community_size" = min(community_sizes), 
                        "max_community_size" = max(community_sizes),
                        "mean_community_size" = mean(community_sizes),
                        "sd_community_size" = sd(community_sizes)
                        )
   all_community_stats[[as.character(.slice)]] <- community_stats
-}
+  } else if (cd_algorithm == "Leiden") {
+    community_stats <- c("slice" = .slice,
+                         "N_communities" = length(communities),
+                         "net_modularity" = communities$quality,
+                         "min_community_size" = min(community_sizes), 
+                         "max_community_size" = max(community_sizes),
+                         "mean_community_size" = mean(community_sizes),
+                         "sd_community_size" = sd(community_sizes)
+    )
+    all_community_stats[[as.character(.slice)]] <- community_stats
+    }
+  }
 all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
 all_community_stats_combined[[as.character(i)]] <- all_community_stats
 all_communities_combined[[as.character(i)]] <- all_communities
@@ -278,6 +295,9 @@ rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_
 Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
 print(vis)
 dev.off()
+
+
+
 
 # Visualise change in modularity, showing intervention by La Chalotais (1763) and Borrely
 
