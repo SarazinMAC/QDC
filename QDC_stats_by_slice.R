@@ -166,7 +166,7 @@ rio::export(CC_stats, file = paste0(export_path,"Clustering_coefficient_by_", sl
 
 # Extract community structure / modularity score of a network at a time point
 
-dyn_net = QDC_dyn
+dyn_net <- QDC_dyn
 
 attr_dyn_df <- QDC_vs[,5:ncol(QDC_vs)]
 
@@ -383,18 +383,47 @@ for (membership in membership_by_count) {
   community <- which(membership_strings==membership)[1]
   communities_to_plot <- all_communities_combined[[community]][[slice_to_extract]]
   # set consistent colours for communities, based on presence of key actors ("community_leaders")
-  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvétius", "Pellicier", "Pluche", "Louis XV", "Daragon")
+  # NOTE: This works in for slices 17634 qnd 17635, when Rivard community merges into Parlement de Paris - unsure if it works in other situations
+#  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvétius", "Pellicier", "Pluche", "Louis XV", "Daragon")
+  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvétius", "D'Alembert", "Daragon")
+#  community_leader_colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders)]
+  community_leader_colours_comm <- pal(10, alpha = 0.5)[seq_along(community_leaders)]
+#  community_leader_colours_comm <- c25_comm[seq_along(community_leaders)]
+#  community_leader_colours_comm <- terrain.colors(10, alpha = 0.3)[seq_along(community_leaders)]
+#  community_leader_colours_comm <-  colorspace::rainbow_hcl(10, alpha = 0.3)[seq_along(community_leaders)]
+  
+#  community_leader_colours_borders <- rainbow(10, alpha = 1)[seq_along(community_leaders)]
+  community_leader_colours_borders <- pal(10, alpha = 1)[seq_along(community_leaders)]
+#  community_leader_colours_borders <- c25[seq_along(community_leaders)]
+#  community_leader_colours_borders <- terrain.colors(10, alpha = 1)[seq_along(community_leaders)]
+#  community_leader_colours_borders <- colorspace::rainbow_hcl(10, alpha = 1)[seq_along(community_leaders)]
+  
+  names(community_leader_colours_comm) <- community_leaders
+  names(community_leader_colours_borders) <- community_leaders
   
   communities_to_plot_members <- membership(communities_to_plot)
   community_leaders_communities <- communities_to_plot_members[community_leaders]
   colours <- rep(categorical_pal(8), 2)[seq_along(community_leaders)]
   colours_node <- rep(NA, length(communities_to_plot_members))
+  colours_comm <- rep(NA, length(unique(community_leaders_communities)))
+  names(colours_comm) <- names(sort(community_leaders_communities[!duplicated(community_leaders_communities, fromLast = TRUE)]))
+  colours_borders <- rep(NA, length(unique(community_leaders_communities)))
+  names(colours_borders) <- names(sort(community_leaders_communities[!duplicated(community_leaders_communities, fromLast = TRUE)]))
+  
+#  colours_borders <- rep(NA, length(community_leaders_communities))
   for (i in seq_along(community_leaders)) {
     colours_node <- ifelse(communities_to_plot_members==community_leaders_communities[i], colours[i], colours_node)
+    colours_comm[names(colours_comm)==community_leaders[i]] <- community_leader_colours_comm[i]
+    colours_borders[names(colours_borders)==community_leaders[i]] <- community_leader_colours_comm[i]
   }
   # Thought I needed to set community colours, but apparently they are linked to the node colours
-#  colours_comm <- rainbow(10, alpha = 0.3)[community_leaders_communities]
-#  colours_borders <- rainbow(10, alpha = 1)[community_leaders_communities]
+#  colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders_communities)]
+#  colours_borders <- rainbow(10, alpha = 1)[seq_along(community_leaders_communities)]
+  # Create title for visualisation
+  plot_title <- paste0(cd_algorithm, " community visualisation (", 
+                  substr(slice_to_extract, start = 1, stop = 4), 
+                  ", slice ", substr(slice_to_extract, start = 5, stop = 5),
+                  ") - ", membership_prob*100, "% of ", number_of_iterations, " runs")
 
   # Plot visual
   slice_to_plot <- network.collapse(dyn_net, at = as.numeric(slice_to_extract), rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
@@ -406,19 +435,25 @@ for (membership in membership_by_count) {
   
   plot(x = communities_to_plot, y = slice_to_plot,
        vertex.label = V(slice_to_plot)$Actor_pers,
-       edge.arrow.size = 0.2,
-       edge.lty = c("solid", "longdash")[crossing(communities_to_plot, slice_to_plot) + 1],
+       edge.arrow.size = 0.125,
+       edge.arrow.width = 3,
+       edge.lty = c("solid", "dashed")[igraph::crossing(communities_to_plot, slice_to_plot) + 1],
        edge.width = E(slice_to_plot)$weight*2.5,
        edge.color = E(slice_to_plot)$Qual_col,
        col = colours_node,
-       # No need to set community colours
-#       mark.col = colours_comm,
-#       mark.border = colours_borders
+       # Actual need to set community colours
+       mark.col = colours_comm,
+       mark.border = colours_borders
        )
-  title(slice_to_extract, cex.main = 3)
+  title(plot_title, cex.main = 3)
   vis <- recordPlot()
-  
-  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_leiden_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
+
+
+#  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours.png"), width = 2400, height = 1800, type = "png", bg = "white")
+#  tiff(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test.tiff"),
+#       width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
+  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours_2.jpeg"),
+       width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
   print(vis)
   dev.off()
 }
