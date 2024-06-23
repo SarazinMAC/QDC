@@ -848,7 +848,7 @@ QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis,
                                                      actor_colname = "Actor_pers")
 
 
-##### CORRIGER les accents etc.
+##### replace special characters with HTML codes
 
 chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
 
@@ -983,45 +983,9 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
 
 
 ### Make animation
-#compute.animation(QDC_pers_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
-#compute.animation(QDC_pers_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-
-
-## Normal way of doing it
 
 start <- 17619
 end <- 17899
-
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
-
-QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-
-QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_pers_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_pers_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-
-
-
-render.d3movie(QDC_pers_anim, render.par=list(tween.frames=50, show.time = TRUE), displaylabels = FALSE,
-               plot.par = list(bg="white",
-                               #               render.par=list(tween.frames=100, show.time= FALSE),
-                               vertex.border="#ffffff",
-                               vertex.col = "Type_col",
-                               #               vertex.sides = "Vertex_sides", # only circular nodes wanted for final version
-                               main="Querelle des coll?ges, 1762-1789",
-                               #              xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+1761)+(QDC_pers_dyn$gal$slice.par$interval*s)/210))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers, when you use the system where each year is split into 210
-                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
-                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-                               #               vertex.cex = 0.8,
-                               #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
-                               edge.lwd = 2,
-                               vertex.tooltip = function(slice){slice %v% 'vertex.names'}, #(QDC_pers_dyn %v% 'vertex.names')
-#                               edge.tooltip = function(slice){slice %e% 'Tie_name'},
-                               edge.col = "Qual_col", usearrows=TRUE),
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               #               launchBrowser=TRUE, filename="QDC_pers_indegree_slider_fixed_final_test_positions.html",
-               launchBrowser=TRUE, filename="QDC_pers_degree_slider_fixed.html",
-               #               launchBrowser=TRUE, filename="Final position.html",
-               verbose=TRUE)
-
 
 ## Trying to make it less bunched
 
@@ -1086,158 +1050,6 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
 
 
 
-
-#### Legacy visualisation codes
-
-
-
-start <- 1761.8
-end <- 1790
-inertia <- 8 # node position calculated by kamada kawai will be 1/inertia of the final node position. I.e. the greater the inertia, the less the position calculated by kamada kawai will contribute to the node's position and the more the node will stay close to its final position--i.e., the less the node will move
-
-## Normal version - without inertia
-## Let's make texts appear month by month (i.e. interval of 0.08333333)
-
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
-               render.par=list(tween.frames=50, show.time=FALSE),
-               vertex.border="#ffffff",
-               vertex.col = "Type_col",
-               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
-               cex = 2,
-               #              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
-               #               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
-               vertex.cex = function(slice){(10*(log(((degree(slice)+5)/100)+1)))},
-               edge.lwd = 1.5,
-               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
-               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
-               output.mode = "HTML",
-               d3.options = list(animationDuration=600, enterExitAnimationFactor=0, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
-               launchBrowser=TRUE, filename="QDC_pers_degree_normal.html",
-               verbose=TRUE)
-
-
-## Let's try to create algorith that makes the layout move much less
-
-## Version 1: make nodes stay closer to their final position
-
-
-
-compute.animation(QDC_pers_dyn, slice.par=list(start=(end-0.01), end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", layout.par = list(x = get.vertex.attribute.active(QDC_pers_dyn, "animation.x", onset = 1789.8, terminus = 1790), y = get.vertex.attribute.active(QDC_pers_dyn, "animation.y", onset = 1789.8, terminus = 1790)), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-x <- get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at=end)
-y <- get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at=end)
-
-  
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-for (i in seq(from = start,to = end, by=0.08333333)) {
-  activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = i)+(x*(inertia-1)))/inertia, at = i)
-}
-
-for (i in seq(from = start,to = end, by=0.08333333)) {
-  activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = i)+(y*(inertia-1)))/inertia, at = i)
-}
-
-## Let's make texts appear month by month (i.e. interval of 0.08333333)
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x", y = "animation_y"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
-               render.par=list(tween.frames=50, show.time=FALSE),
-               vertex.border="#ffffff",
-               vertex.col = "Type_col",
-               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
-               cex = 2,
-#              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
-#               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
-               vertex.cex = function(slice){(10*(log(((degree(slice)+5)/100)+1)))},
-               edge.lwd = 1.5,
-               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
-               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
-               output.mode = "HTML",
-               d3.options = list(animationDuration=600, enterExitAnimationFactor=0, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
-               launchBrowser=TRUE, filename="QDC_pers_normal.html",
-               verbose=TRUE)
-  
-
-
-
-
-#### Version 2: make nodes closer to their next position in the sequence.
-
-## Doesn't do much in practice
-
-QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
-
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-
-activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = end), at = end)
-activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = end), at = end)
-
-for (i in seq(from = end,to = start, by=-0.08333333)) {
-  x <- get.vertex.attribute.active(QDC_pers_dyn, "animation.x", onset=(i), terminus=i)
-  activate.vertex.attribute(QDC_pers_dyn, "animation_x", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.x", at = i-0.08333333)+(x*(inertia-1)))/inertia, at = i-0.08333333)
-}
-
-for (i in seq(from = end,to = start, by=-0.08333333)) {
-  y <- get.vertex.attribute.active(QDC_pers_dyn, "animation.y", onset=(i), terminus=i)
-  activate.vertex.attribute(QDC_pers_dyn, "animation_y", value = (get.vertex.attribute.active(QDC_pers_dyn, "animation.y", at = i-0.08333333)+(y*(inertia-1)))/inertia, at = i-0.08333333)
-}
-
-## Let's make texts appear month by month (i.e. interval of 0.08333333)
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), animation.mode = "useAttribute", layout.par = list(x = "animation_x", y = "animation_y"), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
-               render.par=list(tween.frames=50, show.time=FALSE),
-               vertex.border="#ffffff",
-               vertex.col = "Type_col",
-               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
-               cex = 2,
-#              plot.par = list(mai=c(0,0,0,0)), # DOESN'T WORK
-               vertex.cex = function(slice){0.5/(1 + degree(slice)*10) + (10*degree(slice)/(degree(slice) + 0.00001)*(log(((degree(slice)+5)/100)+1)))},
-               edge.lwd = 1.5,
-               vertex.tooltip = function(slice){slice %v% 'vertex.names'},
-               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
-               output.mode = "HTML",
-               d3.options = list(animationDuration=800, enterExitAnimationFactor=0, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=1,y=1)),
-               launchBrowser=TRUE, filename="QDC_pers_vers2.html",
-               verbose=TRUE)
-
-
-
-#### Version 3: Now let's try the solution where we artificially make every node be there from the beginning and make them only appear when they get an edge
-
-
-QDC_vs_onset62 <- QDC_vs
-QDC_vs_onset62$onset <- 1762
-
-QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs_onset62[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
-set.vertex.attribute(QDC_pers_dyn, "vertex.label.size", ifelse(get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="D'Alembert (1753)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="La Chalotais (1763)"| get.vertex.attribute(QDC_pers_dyn, "vertex.names")=="Rousseau (1762)", 1, 0))
-vertex.label.size <- get.vertex.attribute(QDC_pers_dyn, "vertex.label.size")
-
-### Make animation
-#compute.animation(QDC_pers_dyn, slice.par=list(start=1762, end=1770, interval=1, aggregate.dur=1, rule="any"), default.dist = 6, verbose = TRUE)
-#compute.animation(QDC_pers_dyn, slice.par=list(start=1761.8, end=1764.8, interval=0.2, aggregate.dur=0.2, rule="any"), chain.direction = "reverse", default.dist = 6, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-## Let's make perss appear month by month (i.e. interval of 0.08333333)
-
-par(mfrow=c(1,1), mar=c(0.1,0.1,0.1,0.1)) 
-
-compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=0.08333333, aggregate.dur=0.08333333, rule="any"), chain.direction = "reverse", default.dist = 5, verbose = TRUE) # Note: This producesa kind of error where 'animation.x.active' is apparently malformed (inconsistent across years). This is the case whether I split QDC years or leave the Date variable as it is originally
-render.d3movie(QDC_pers_dyn, displaylabels = FALSE, bg="white",
-               render.par=list(tween.frames=50, show.time=FALSE),
-               vertex.border="#ffffff",
-               vertex.col = "Type_col",
-               xlab = function(s){paste(trunc(QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s))}, #This label makes the start year appear at the bottom, truncated of its decimal numbers
-               #vertex.sides = c(3,4,5),
-               #vertex.cex = 0.8,
-               #vertex.cex = function(slice){ (0.8*degree(slice)/(degree(slice) + 0.000001))}, #This one makes nodes grow as they appear
-               #               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice) + 0.000001)*(log(((degree(slice)+5)/100)+1)))}, #Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
-               vertex.cex = function(slice){ (10*degree(slice)/(degree(slice))*(log(((degree(slice)+5)/100)+1)))}, #without the tiny number - Trying to make node size proportional to node degree, but not with a linear funtion - THIS uses logarithm function. To make all nodes bigger, increase constant at beginning of line; to make Rousseau proportionally bigger, increase denominator of (degree(slice)+5)/100); to make small degree nodes relatively bigger, increase the constant k in (degree(slice)+k)/100)
-               #vertex.cex = function(slice){ (0.25*degree(slice)/(degree(slice) + 0.000001)*(degree(slice)*exp(-0.015*degree(slice))))}, #geometric decay function (see https://mathworld.wolfram.com/ExponentialDecay.html) - kind of works for large nodes but the small nodes are just tiny
-               #vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice)}, #This one makes nodes appear instantly - also if you add a very small number at the end
-               #label.cex = vertex.label.size,
-               edge.lwd = 1.5,
-               vertex.tooltip = (QDC_pers_dyn %v% 'vertex.names'),
-               edge.col = "Qual_col", usearrows=TRUE, edge.lwd=4,
-               d3.options = list(animationDuration=600, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=1,y=1)),
-               launchBrowser=TRUE, filename="QDC_pers_onset62_instant_node_appear.html",
-               verbose=TRUE)
 
 
 
