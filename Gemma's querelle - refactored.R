@@ -6,6 +6,7 @@ library(network)
 library(ndtv)
 library(networkDynamic)
 library(dplyr)
+l
 
 #detach("package:ndtv", unload=TRUE)
 #detach("package:networkDynamic", unload=TRUE)
@@ -869,28 +870,64 @@ for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
-# loop over edge spells to add vertex attribute for number of repeat data
+# Need to create vertex attribute to take into account the fact that nodes send or receive multiple ties
 
-n_multiple_ties_df_senders <- QDC_es_dynamic_vis[, c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")]
-n_multiple_ties_df_receivers <- QDC_es_dynamic_vis[, c("onset", "terminus", "Tie_code", "edge_weights", "TIE-PERSON")]
-colnames(n_multiple_ties_df_receivers) <- c("onset", "terminus", "Actor_code", "edge_weights", "ACTOR-PERSON")
+# Create initial dataset (keeping only cases where edge weights are greater than 1, and the greatest edge weights in each slice)
+n_multiple_ties_df_senders <- QDC_es_dynamic_vis[, c("onset", "terminus", "Actor_code", "Tie_code", "edge_weights", "ACTOR-PERSON", "TIE-PERSON")]
+n_multiple_ties_df_receivers <- QDC_es_dynamic_vis[, c("onset", "terminus", "Tie_code", "Actor_code", "edge_weights", "TIE-PERSON", "ACTOR-PERSON")]
+colnames(n_multiple_ties_df_receivers) <- c("onset", "terminus", "Actor_code", "Tie_code", "edge_weights", "ACTOR-PERSON", "TIE-PERSON")
 n_multiple_ties_df <- rbind(n_multiple_ties_df_senders, n_multiple_ties_df_receivers)
-n_multiple_ties_df$`ACTOR-PERSON`=NULL
-n_multiple_ties_df_isolates <- QDC_vs_dynamic_vis[!(QDC_vs_dynamic_vis$Actor_code %in% n_multiple_ties_df$Actor_code), c("onset", "terminus", "Actor_code")]
-n_multiple_ties_df_isolates$edge_weights <- 1
-n_multiple_ties_df <- rbind(n_multiple_ties_df, n_multiple_ties_df_isolates)
-#n_multiple_ties_df <- unique(n_multiple_ties_df)
-# remove cases where multiple n_multiple_ties values appear in a slice - keep the largest value
-n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset, n_multiple_ties_df$Actor_code, -n_multiple_ties_df$edge_weights),]
-n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df
-                                                     [, c("onset", "terminus", "Actor_code")]),]
-n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$onset),]
+n_multiple_ties_df <- n_multiple_ties_df[n_multiple_ties_df$edge_weights!=1,]
+n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df, fromLast = TRUE),]
+n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df[,c("onset", "terminus", "Actor_code", "Tie_code", "ACTOR-PERSON", "TIE-PERSON")], fromLast = TRUE),]
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$Tie_code),]
+
+# substract 1 from edge weights (we don't want to count the first edge between ego and alter) before splitting df into multiple df, one per actor
 
 n_multiple_ties_df$edge_weights <- n_multiple_ties_df$edge_weights-1
+n_multiple_ties_list <- split(n_multiple_ties_df, f = n_multiple_ties_df$Actor_code)
 
+# for each actor, sum the edge weights of each distinct (non-overlapping) edge as these edges come in
+for (i in seq_along(n_multiple_ties_list)) {
+  list_df <- n_multiple_ties_list[[i]]
+  list_df2 <- n_multiple_ties_list[[i]]
+  
+  if(nrow(list_df)==1) {
+    next
+  }
+  for(rownum in 2:nrow(list_df)) {
+    non_overlapping_edges <- list_df[1:rownum-1,]
+    non_overlapping_edges <- non_overlapping_edges[!duplicated(non_overlapping_edges[,c("terminus", "Actor_code", "Tie_code", "ACTOR-PERSON", "TIE-PERSON")], fromLast = TRUE),]
+    non_overlapping_edges <- non_overlapping_edges[non_overlapping_edges$Tie_code!=list_df$Tie_code[rownum],]
+#    non_overlapping_edge_weights <- non_overlapping_edges$edge_weights[length(non_overlapping_edges$edge_weights)]
+    non_overlapping_edge_weights <- non_overlapping_edges$edge_weights
+    list_df2$edge_weights[rownum] <- sum(list_df$edge_weights[rownum], non_overlapping_edge_weights)
+  }
+  n_multiple_ties_list[[i]] <- list_df2
+}
+
+# Clean, format dataset, add initial node_edge_weights of 0 for each node
+rm(list_df, list_df2, non_overlapping_edges, non_overlapping_edge_weights)
+n_multiple_ties_df <- data.table::rbindlist(n_multiple_ties_list)
+n_multiple_ties_df <- n_multiple_ties_df[, c("onset", "terminus", "Actor_code", "edge_weights")]
+colnames(n_multiple_ties_df)[colnames(n_multiple_ties_df)=="edge_weights"] <- "node_edge_weights"
+
+n_multiple_ties_df_initial <- QDC_vs_dynamic_vis[, c("onset", "terminus", "Actor_code")]
+n_multiple_ties_df_initial$node_edge_weights <- 0
+n_multiple_ties_df_initial$onset <- min(QDC_vs_dynamic_vis$onset)
+
+n_multiple_ties_df <- rbind(n_multiple_ties_df_initial, n_multiple_ties_df)
+
+# remove cases where multiple n_multiple_ties values appear in a slice - keep the largest value
+n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$node_edge_weights),]
+n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df
+                                                     [, c("onset", "terminus", "Actor_code")], fromLast = TRUE),]
+
+
+# Now add var as vertex attribute
 for(row in 1:nrow(n_multiple_ties_df)){
-  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'n_multiple_ties',
-                            value = (n_multiple_ties_df$edge_weights[row]),
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'node_edge_weights',
+                            value = (n_multiple_ties_df$node_edge_weights[row]),
                             onset=n_multiple_ties_df$onset[row],terminus=n_multiple_ties_df$terminus[row],
                             v=n_multiple_ties_df$Actor_code[row])
 }
@@ -1030,7 +1067,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                xlab = year_label,
 #                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
                                 vertex.cex = function(slice){
-                                degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "n_multiple_ties")*10
+                                degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "node_edge_weights")
                                 (10*(degree_value + 0.000001)/(degree_value + 0.000001)*(log(((degree_value+5)/100)+1)))
                               },
                                #               vertex.cex = 0.8,
