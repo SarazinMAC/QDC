@@ -25,7 +25,7 @@ slice_or_year <- "slice"
 
 # import dataset
 
-QDC_file <- import(paste0(Data_path, Data_name))
+QDC_file <- import(paste0(Data_path, "original_qdc_datasets\\", Data_name))
 
 # Import custom functions
 
