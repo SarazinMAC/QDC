@@ -2,9 +2,6 @@
 ##### QDC - Descriptive Statistics #####
 ########################################
 
-#intergraph_url <- "https://cran.r-project.org/src/contrib/Archive/intergraph/intergraph_2.0-2.tar.gz"
-#install.packages(intergraph_url, repos=NULL, type="source")
-
 library(igraph)
 library(tsna)
 library(writexl)
@@ -18,10 +15,9 @@ library(extrafont)
 
 options(scipen = 999)
 
-## Create reference dfs
+## Create reference df
 
 original_QDC_es <- QDC_es
-
 
 ## set configurable values
 
@@ -96,22 +92,6 @@ QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
 QDC_vs <- QDC_vs[order(QDC_vs$Actor_code),]
 
 QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
-
-
-
-# static vertex attributes
-
-if (text_or_pers == "text") {
-  QDC_text_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs, 
-                                                    node_attr_df = QDC_text_nodes,
-                                                    actor_colname = "Actor_text",
-                                                    Text_or_pers_name = "Text_Name")
-} else if (text_or_pers == "pers") {
-  QDC_pers_attr_dyn <- create_static_vertex_attr_df(vs_df = QDC_vs, 
-                                                    node_attr_df = QDC_pers_nodes,
-                                                    Text_or_pers_name = "Pers_Name",
-                                                    actor_colname = "Actor_pers")
-}
 
 
 # Extract community structure / modularity score of a network at a time point
@@ -422,7 +402,7 @@ for (membership in membership_by_count) {
 
 
 
-### tSnaStats doesn't seem to work with changing vertex activity - so recreate network with all nodes present in 17620
+### tSnaStats doesn't work with changing vertex activity - so recreate network with all nodes present in 17620
 
 QDC_vs_onset_62 <- QDC_vs
 QDC_vs_onset_62$onset <- start_slice
