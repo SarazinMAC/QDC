@@ -6,7 +6,7 @@ library(network)
 library(ndtv)
 library(networkDynamic)
 library(dplyr)
-l
+
 
 #detach("package:ndtv", unload=TRUE)
 #detach("package:networkDynamic", unload=TRUE)
@@ -312,19 +312,10 @@ QDC <- QDC_file[!empty_rows,] # Only keep rows that return FALSE to the line abo
 QDC$order <- 1:nrow(QDC)
 
 
-##### Cleaning base dataset #####
-
-##Delete College de Soreze and La Fleche if they are in there
-#QDC <- QDC[-which((QDC$`ACTOR-PERSON`=="Coll?ge de Sor?ze" | QDC$`TIE-PERSON`=="Coll?ge de Sor?ze")),]
-#QDC <- QDC[-which((QDC$`ACTOR-PERSON`=="Coll?ge de la Fl?che" | QDC$`TIE-PERSON`=="Coll?ge de la Fl?che")),]
-
-
-
 ##### Creating datasets #####
 
-## Restricting dataset to 1762 - 1789, or, for testing, another date range
+## Restricting dataset to 1762 - 1789
 QDC_62_89 <- QDC[which(QDC$Date>1761),]
-#QDC_62_89 <- QDC[which(QDC$Date>1771 & QDC$Date<1774),]
 
 
 
@@ -341,7 +332,6 @@ QDC_text <- subset(QDC, select=
                        "Place"))
 QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
 
-#QDC_text_nodes_2 <- QDC_text[!duplicated(QDC_text$`ACTOR-TEXT`),]
 
 QDC_text_node_data <- as.data.frame(table(QDC_text$`ACTOR-TEXT`, QDC_text$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_text$Gender, QDC_text$Date)) #This creates a problem when nodes have missing data for any attribute; if they do, then it gives missing values to all attributes
 QDC_text_node_data <- QDC_text_node_data[QDC_text_node_data$Freq>0,1:4]
@@ -381,7 +371,7 @@ QDC_text <- QDC_text[!is.na(QDC_text$`TIE-TEXT`),]
 QDC_text <- QDC_text[!is.na(QDC_text$Quality),]
 QDC_text[,"Line_type"] <- "solid"
 
-### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
+### negative 'Quality' values mess with the network package. Let's just make all Quality values positive
 QDC_text$Quality <- QDC_text$Quality + 3
 QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
 
@@ -571,23 +561,6 @@ QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 
 ##### Visualisations #####
-
-
-
-#### __Movies ####
-
-
-
-#filmstrip(QDC_pers2_dyn, displaylabels=TRUE, mfrow=c(1, 1),
-#          slice.par=list(start=1753, end=1788, interval=6, 
-#                         aggregate.dur=6, rule='any'))
-
-
-
-
-
-
-
 
 
 ##### ____Network Dynamic Object - Person-based network #####
@@ -950,30 +923,17 @@ for (rownum in 2:nrow(QDC_es_dynamic_vis)) {
   }
 }
 
-## Note: I effectively can't use the Tie_name and Tie_name_dyn variables yet because the below code can only accommodate one edge per dyad. But it may be useful in future. 
-## Instead, for now I have to take the value of QDC_es_dynamic_vis$Tie_name_dyn that has all the edges
-## Note 16/05/2024: This is no longer true
-
-#x <- QDC_es_dynamic_vis[,c("ACTOR-PERSON", "TIE-PERSON", "Tie_name_dyn")]
-#x <- x[order(x$Tie_name_dyn, decreasing = TRUE),]
-#x <- x[!duplicated(x[,c("ACTOR-PERSON", "TIE-PERSON")]),]
-#x[,"Actor_tie"] <- paste0(x$`ACTOR-PERSON`, "  &#8594 ", x$`TIE-PERSON`)
-#QDC_es_dynamic_vis[,"Tie_name_fixed"] <- x$Tie_name_dyn[match(unlist(QDC_es_dynamic_vis$Actor_tie), x$Actor_tie)]
-
-
 QDC_es_dynamic_vis <- QDC_es_dynamic_vis[order(QDC_es_dynamic_vis$num),]
 QDC_es_dynamic_vis$num=NULL
 
 # loop over edge data to add the dynamic attributes on the edge
 for(row in 1:nrow(QDC_es_dynamic_vis)){
-  # get the id of the edge from its tail and head
   edge_id <- get.edgeIDs(QDC_pers_dyn,v=QDC_es_dynamic_vis$Actor_code[row],
                          alter=QDC_es_dynamic_vis$Tie_code[row])
   activate.edge.attribute(QDC_pers_dyn,'edge_colour',QDC_es_dynamic_vis$Qual_col[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
   activate.edge.attribute(QDC_pers_dyn,'Tie_name_dyn',QDC_es_dynamic_vis$Tie_name_dyn[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
-  # TODO: Check that this works
   activate.edge.attribute(QDC_pers_dyn,'edge_weights',QDC_es_dynamic_vis$edge_weights[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
   
@@ -1121,9 +1081,6 @@ QDC_pre_62_edges <- QDC_es_transforms(es_df = QDC_pre_62_edges, vs_df = QDC_vs,
 
 ## Create network dynamic object
 
-# Standard version (with no changes in colour etc.)
-#QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es, create.TEAs = TRUE)
-
 # Version where we make pre-QdC edges and vertices be a different colour before they are "brought in"
 
 QDC_vs_dynamic_vis <- QDC_vs
@@ -1143,11 +1100,6 @@ QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vi
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
 
 QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis[,1:5], edge.spells = QDC_es_dynamic_vis[,c(1:4, 9)], create.TEAs = TRUE)
-
-# Previous version, with base.net defined:
-#QDC_text_dyn <- networkDynamic(base.net = QDC_text_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
-# Test version, for debugging:
-#QDC_text_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:3], edge.spells = QDC_es[,1:4])
 
 ## Define vertex and edge attributes
 
@@ -1183,7 +1135,6 @@ for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
 
 # loop over edge data to add the dynamic attributes on the edge
 for(row in 1:nrow(QDC_es_dynamic_vis)){
-  # get the id of the edge from its tail and head
   edge_id <- get.edgeIDs(QDC_text_dyn,v=QDC_es_dynamic_vis$Actor_code[row],
                      alter=QDC_es_dynamic_vis$Tie_code[row])
   activate.edge.attribute(QDC_text_dyn,'edge_colour',QDC_es_dynamic_vis$Qual_col[row],
@@ -1191,15 +1142,6 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
   activate.edge.attribute(QDC_text_dyn,'Tie_name',QDC_es_dynamic_vis$Tie_name[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
 }
-
-
-## Remove isolate nodes - disabled as of 11/02/2024
-
-#Isol <- import(paste0(Data_path, "OUTLIERS in QUERELLE.xlsx")) 
-#w <- which((QDC_text_dyn %v% "vertex.names") %in% Isol$Isolates)
-#(QDC_text_dyn %v% "vertex.names")[w] #CHECK: Works
-#network::delete.vertices(QDC_text_dyn, w)
-
 
 #### CORRIGER (!) les accents etc.
 chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
@@ -1268,128 +1210,4 @@ render.d3movie(QDC_text_anim2,
                output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
-### NOTE: if you want to switch the x and y co-ordinates of the nodes, you need to switch QDC_text_dyn %v% "animation.x.active" and QDC_text_dyn %v% "animation.y.active" vertex attributes (these attributes represent the node co-ordinates. They are re-calculated each time the compute.animation function is run.)
 
-save(list = c("QDC_text_anim2", "QDC_text_anim_final"), file = "QDC_text_degree_slider_fixed_lessBunched_version3.RData")
-
-
-
-
-
-
-
-
-
-## Note: the following doens't work - next solution is to try to set a dynamic vertex attribute using activate.vertex.attribute or something like that
-animationx <- (QDC_text_anim %v% "animation.x.active")
-animationx[animationx<100] <- animationx[animationx<100]*1.1
-set.vertex.attribute(x = QDC_text_anim, attrname = "animation.x.active", value = animationx)
-
-animationy <- (QDC_text_anim %v% "animation.y.active")
-animationy[animationy<100] <- animationy[animationy<100]*1.1
-set.vertex.attribute(x = QDC_text_anim, attrname = "animation.y.active", value = animationy)
-
-rm(QDC_text_anim)
-
-#(QDC_text_anim %v% "animation.y.active")[(QDC_text_anim %v% "animation.y.active")<100] <- (QDC_text_anim %v% "animation.y.active")[(QDC_text_anim %v% "animation.y.active")<100]*2
-
-xx <- get.vertex.attribute.active(QDC_text_anim2, "animation.x", onset = 17890, terminus = 17899, return.tea = TRUE)
-
-for (i in (1:length(xx))) {
-  for (j in 1:length(lengths(xx[[i]][[1]]))) {
- xx[[i]][[1]][[j]] <- xx[[i]][[1]][[j]]*2   
-  }
-}
-
-activate.vertex.attribute(x = QDC_text_anim2, prefix = "animation.x2", value = xx, dynamic.only = TRUE)
-xxx <- get.vertex.attribute.active(QDC_text_anim2, "animation.x2", onset = 17890, terminus = 17899, return.tea = TRUE)
-
-## the result - xxx - produces an object that is not in the right format
-
-### Test movie animation (person net) - 1762 to 1764:
-
-test_vs <- QDC_vs[QDC_vs$onset<1766,]
-test_es <- QDC_es[QDC_es$onset<1766,]
-
-test_es$onset[27:78] <- seq(from=1763, to=1763.999, by = 0.0212766)
-test_es$onset[79:104] <- seq(from=1764, to=1764.999, by = 0.04347826)
-test_es$terminus <- 1766
-test_vs$terminus <- 1766
-test_vs$onset <- test_es$onset[match(unlist(test_vs$Actor_code), test_es$Actor_code)]
-test_vs[,"onset_2"] <- test_es$onset[match(unlist(test_vs$Actor_code), test_es$Tie_code)]
-test_vs$onset[which(is.na(test_vs$onset))] <- test_vs$onset_2[which(is.na(test_vs$onset))]
-test_vs$onset_2[which(is.na(test_vs$onset_2))] <- 9999
-test_vs$onset[test_vs$onset_2<test_vs$onset] <- test_vs$onset_2[test_vs$onset_2<test_vs$onset]
-test_vs$onset_2=NULL
-test_vs[,"New_code"] <- 1:86
-test_es$Actor_code <- test_vs$New_code[match(unlist(test_es$Actor_code), test_vs$Actor_code)]
-test_es$Tie_code <- test_vs$New_code[match(unlist(test_es$Tie_code), test_vs$Actor_code)]
-test_vs$Actor_code <- test_vs$New_code
-test_vs$New_code=NULL
-
-test_dyn <- networkDynamic(vertex.spells = test_vs[,1:3], edge.spells = test_es)
-
-compute.animation(test_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule='any'))
-render.d3movie(QDC_text_dyn, displaylabels = FALSE, bg="white", main = "Querelle",
-               render.par=list(tween.frames=50),
-               vertex.border="#ffffff", vertex.col = "blue",
-               edge.col = '#55555599', usearrows=TRUE, edge.lwd=4,
-               show.time = TRUE,
-               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE),
-               launchBrowser=TRUE, verbose=TRUE, filename="QDC.html")
-
-
-
-
-##### Descriptive stats #####
-
-
-####__indegree & outdegree distributions (positive, negative & overall (inc. neutral)) ####
-
-
-####____Text####
-
-
-Overall_text_send <- data.frame(table(QDC_text[,1]))
-Overall_text_send <- Overall_text_send[with(Overall_text_send, order(-Overall_text_send$Freq)),]
-Overall_text_rec <- data.frame(table(QDC_text[,2]))
-Overall_text_rec <- Overall_text_rec[with(Overall_text_rec, order(-Overall_text_rec$Freq)),]
-
-QDC_text_pos <- QDC_text[QDC_text$Quality>0,]
-Pos_text_send <- data.frame(table(QDC_text_pos[,1]))
-Pos_text_send <- Pos_text_send[with(Pos_text_send, order(-Pos_text_send$Freq)),]
-Pos_text_rec <- data.frame(table(QDC_text_pos[,2]))
-Pos_text_rec <- Pos_text_rec[with(Pos_text_rec, order(-Pos_text_rec$Freq)),]
-
-
-QDC_text_neg <- QDC_text[QDC_text$Quality<0,]
-Neg_text_send <- data.frame(table(QDC_text_neg[,1]))
-Neg_text_send <- Neg_text_send[with(Neg_text_send, order(-Neg_text_send$Freq)),]
-Neg_text_rec <- data.frame(table(QDC_text_neg[,2]))
-Neg_text_rec <- Neg_text_rec[with(Neg_text_rec, order(-Neg_text_rec$Freq)),]
-
-write.xlsx(list("Overall_text_send" = Overall_text_send, "Overall_text_rec" = Overall_text_rec, "Pos_text_send" = Pos_text_send, "Pos_text_rec" = Pos_text_rec, "Neg_text_send" = Neg_text_send, "Neg_text_rec" = Neg_text_rec), "QDC_text_stats.xlsx")
-
-
-####____Person####
-
-
-Overall_pers_send <- data.frame(table(QDC_pers[,1]))
-Overall_pers_send <- Overall_pers_send[with(Overall_pers_send, order(-Overall_pers_send$Freq)),]
-Overall_pers_rec <- data.frame(table(QDC_pers[,2]))
-Overall_pers_rec <- Overall_pers_rec[with(Overall_pers_rec, order(-Overall_pers_rec$Freq)),]
-
-QDC_pers_pos <- QDC_pers[QDC_pers$Quality>0,]
-Pos_pers_send <- data.frame(table(QDC_pers_pos[,1]))
-Pos_pers_send <- Pos_pers_send[with(Pos_pers_send, order(-Pos_pers_send$Freq)),]
-Pos_pers_rec <- data.frame(table(QDC_pers_pos[,2]))
-Pos_pers_rec <- Pos_pers_rec[with(Pos_pers_rec, order(-Pos_pers_rec$Freq)),]
-
-
-QDC_pers_neg <- QDC_pers[QDC_pers$Quality<0,]
-Neg_pers_send <- data.frame(table(QDC_pers_neg[,1]))
-Neg_pers_send <- Neg_pers_send[with(Neg_pers_send, order(-Neg_pers_send$Freq)),]
-Neg_pers_rec <- data.frame(table(QDC_pers_neg[,2]))
-Neg_pers_rec <- Neg_pers_rec[with(Neg_pers_rec, order(-Neg_pers_rec$Freq)),]
-
-write.xlsx(list("Overall_pers_send" = Overall_pers_send, "Overall_pers_rec" = Overall_pers_rec, "Pos_pers_send" = Pos_pers_send, "Pos_pers_rec" = Pos_pers_rec, "Neg_pers_send" = Neg_pers_send, "Neg_pers_rec" = Neg_pers_rec), "QDC_pers_stats.xlsx")
