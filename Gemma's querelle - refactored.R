@@ -490,9 +490,6 @@ QDC_pers <- QDC_pers[!is.na(QDC_pers$`ACTOR-PERSON`),]
 QDC_pers <- QDC_pers[!is.na(QDC_pers$`TIE-PERSON`),]
 QDC_pers <- QDC_pers[!is.na(QDC_pers$Quality),]
 QDC_pers[,"Line_type"] <- "solid"
-##Delete College de Soreze and La Fleche if they are in there
-#QDC_pers <- QDC_pers[-(which(QDC_pers$`ACTOR-PERSON`=="Coll?ge de Sor?ze" | QDC_pers$`TIE-PERSON`=="Coll?ge de Sor?ze")),]
-#QDC_pers <- QDC_pers[-(which(QDC_pers$`ACTOR-PERSON`=="Coll?ge de la Fl?che" | QDC_pers$`TIE-PERSON`=="Coll?ge de la Fl?che")),]
 
 ### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
 QDC_pers$Quality <- QDC_pers$Quality + 3
@@ -586,13 +583,10 @@ QDC_for_pers_dyn$`TIE-TEXT`[
 # First, main QDC texts
 
 QDC_62_89_bis <- QDC_for_pers_dyn[which(QDC_for_pers_dyn$Date>1761),]
-#QDC_62_89_bis <- QDC_62_89
-#QDC_62_89_bis$`TIE-TEXT`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] <- QDC_62_89_bis$`TIE-PERSON`[is.na(QDC_62_89_bis$`TIE-TEXT`) & !(is.na(QDC_62_89_bis$`TIE-PERSON`))] 
 QDC_text_for_pers_net <- subset(QDC_62_89_bis, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "order"))
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`ACTOR-TEXT`),]
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$`TIE-TEXT`),]
 QDC_text_for_pers_net <- QDC_text_for_pers_net[!is.na(QDC_text_for_pers_net$Quality),]
-#QDC_text_for_pers_net[,"Line_type"] <- "solid" #Not needed for dynamic vis
 
 ### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
 QDC_text_for_pers_net$Quality <- QDC_text_for_pers_net$Quality + 3
@@ -619,7 +613,6 @@ QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
 
 QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
-#QDC_text_for_pers_net$order=NULL
 
 QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
@@ -660,38 +653,11 @@ QDC_pre_62_edges <- QDC_es_transforms(es_df = QDC_pre_62_edges, vs_df = QDC_vs_t
 ## WITHOUT such a node attribute file, have to create a table of all ACTOR-TEXT that each ACTOR-PERSON has and re-input tie-persons that have no tie-text value. 
 ## To do that, just rbind a file with actor-persons in both the actor-text and actor-person columns
 
-#text_to_person_mapper <- as.data.frame(table(QDC$`ACTOR-TEXT`, QDC$`ACTOR-PERSON`))
-#text_to_person_mapper <- text_to_person_mapper[text_to_person_mapper$Freq>0,1:2]
-#xx <- data.frame(text_to_person_mapper$Var2, text_to_person_mapper$Var2)
-#xx <- unique(xx)
-#colnames(xx) <- c("Var1", "Var2")
-#text_to_person_mapper <- rbind(text_to_person_mapper, xx)
-
-
 text_to_person_mapper <- unique(QDC[, c("ACTOR-TEXT", "ACTOR-PERSON")])
 pers_to_person_mapper <- text_to_person_mapper
 pers_to_person_mapper$`ACTOR-TEXT` <- pers_to_person_mapper$`ACTOR-PERSON`
 pers_to_person_mapper <- unique(pers_to_person_mapper)
 text_to_person_mapper <- rbind(text_to_person_mapper, pers_to_person_mapper)
-
-## CHECK: Does each actor-text correspond to exactly one actor-person?
-#which(duplicated(text_to_person_mapper$Var1))
-# ANS: Yes
-
-## CHECK: Are any actors in tie-text, response-text 1 and response-text 2 NOT in actor-text column?
-#QDC$`TIE-TEXT`[which(!(QDC$`TIE-TEXT` %in% QDC$`ACTOR-TEXT`))] ; QDC$`Response-TEXT 1`[which(!(QDC$`Response-TEXT 1` %in% QDC$`ACTOR-TEXT`))] ; QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`[which(!(QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2` %in% QDC$`ACTOR-TEXT`))] 
-## CHECK: Are any actors in tie-person, response-person 1 and response-person 2 NOT in actor-person column?
-#QDC$`TIE-PERSON`[which(!(QDC$`TIE-PERSON` %in% QDC$`ACTOR-PERSON`))] ; QDC$`Response-PERSON 1`[which(!(QDC$`Response-PERSON 1` %in% QDC$`ACTOR-PERSON`))] ; QDC$`Response-PERSON 2`[which(!(QDC$`Response-PERSON 2` %in% QDC$`ACTOR-PERSON`))] 
-# ANS: all Response/tie texts/persons are in the actor text/response columns
-## IF NOT, run the following:
-#xx <- as.data.frame(table(QDC$`Response-TEXT 1`, QDC$`Response-PERSON 1`))
-#xx <- xx[xx$Freq>0,]
-#w <- as.data.frame(table(xx$Var1)) # CHECK: each actor-text corresponds to exactly one actor-person
-#xxx <- as.data.frame(table(QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$`Response-PERSON 2`))
-#xxx <- xxx[xxx$Freq>0,]
-#w <- as.data.frame(table(xxx$Var1)) # CHECK: each actor-text corresponds to exactly one actor-person
-#xx <- rbind(text_to_person_mapper, xx, xxx)
-#rm(xx, xxx)
 
 colnames(text_to_person_mapper) <- c("ACTOR-TEXT", "ACTOR-PERSON")
 QDC_es$`TIE-PERSON` <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_es$`TIE-TEXT`), text_to_person_mapper$`ACTOR-TEXT`)]
@@ -710,7 +676,6 @@ QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_co
 # Try using the mapper on QDC_vs_text_dyn
 
 QDC_vs_pers_dyn <- QDC_vs_text_dyn
-#colnames(QDC_vs_pers_dyn)[colnames(QDC_vs_pers_dyn)=="Actor_text"] <- "Actor_pers"
 QDC_vs_pers_dyn$Actor_pers <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_vs_pers_dyn$Actor_text), text_to_person_mapper$`ACTOR-TEXT`)]
 QDC_vs_pers_dyn$Actor_code <- QDC_vs$Actor_code[match(unlist(QDC_vs_pers_dyn$Actor_pers), QDC_vs$Actor_pers)]
 QDC_vs_pers_dyn <- QDC_vs_pers_dyn[order(QDC_vs_pers_dyn$onset, QDC_vs_pers_dyn$order_of_entry),]
@@ -718,25 +683,10 @@ QDC_vs_pers_dyn <- QDC_vs_pers_dyn[!duplicated(QDC_vs_pers_dyn$Actor_code),]
 
 rm(text_to_person_mapper)
 
-## The following is just to remove ambiguity with variable names
-
-#colnames(QDC_es)[colnames(QDC_es)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-#colnames(QDC_es)[colnames(QDC_es)=="TIE-TEXT"] <- "TIE-PERSON"
-#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="ACTOR-TEXT"] <- "ACTOR-PERSON"; 
-#colnames(QDC_pre_62_edges)[colnames(QDC_pre_62_edges)=="TIE-TEXT"] <- "TIE-PERSON"
 
 # Need to replace QdC_vs with a text version for now
 
 QDC_vs <- QDC_vs_pers_dyn
-
-
-## Create network dynamic object
-# Don't use base_net - it screws with creation of dynamic net
-#QDC_pers_dyn <- networkDynamic(base.net = QDC_pers_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE)µ
-#number_of_nodes <- length(unique(QDC_vs$Actor_code))
-
-#QDC_pers_dyn <- networkDynamic(base.net = dummy_net, vertex.spells = QDC_vs[,1:5], edge.spells = QDC_es[,c(1:4, 10)], create.TEAs = TRUE, verbose = TRUE)
-#QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,c("onset", "terminus", "Actor_code", "Tie_code", "Quality", "Qual_col")], create.TEAs = TRUE, verbose = TRUE)
 
 #### Create weight attribute for ties
 
@@ -747,7 +697,7 @@ edge_weights_df[,"ego_alter"] <- paste0(edge_weights_df$Actor_code, "_", edge_we
 edge_weights_df$edge_weights <- 1
 
 for (rownum in 2:nrow(edge_weights_df)) {
-  #TODO: Make the following condition work with years, not slices
+  #TODO: Make the following condition work with years, not just slices
   if (edge_weights_df$ego_alter[rownum]==edge_weights_df$ego_alter[rownum-1]) {
     edge_weights_df$edge_weights[rownum] <- edge_weights_df$edge_weights[rownum-1] + 1
   }
@@ -770,10 +720,8 @@ QDC_es_dynamic_vis$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 if (slice_or_year == "slice") {
   start_slice <- 17620
-  #  pre_62 <- QDC_es[QDC_es$onset<start_slice,]
 } else if (slice_or_year == "year") {
   start_slice <- 1762
-  #  pre_62 <- QDC_es[QDC_es$onset<start_slice,]
 }
 
 QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vis, .start_slice = start_slice)
@@ -781,8 +729,6 @@ QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vi
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
 
 QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis, edge.spells = QDC_es_dynamic_vis[,c("onset", "terminus", "Actor_code", "Tie_code", "Qual_col")], create.TEAs = TRUE)
-
-#reconcile.vertex.activity(QDC_pers_dyn, mode = "expand.to.edges", edge.active.default = FALSE)
 
 #vertex and edge attributes
 
@@ -792,9 +738,6 @@ for (col in colnames(QDC_pers_attr_dyn)) {
   QDC_pers_dyn %v% col <- QDC_pers_attr_dyn[[col]]
 }
 QDC_pers_dyn %v% "vertex.names" <- QDC_pers_attr_dyn$Pers_Name
-
-#QDC_pers_dyn %e% "Tie_name_fix" <- QDC_es$Tie_name_fixed
-#TODO: Fix the presence of NAs in this attribute
 
 # static vertex attributes
 
@@ -871,7 +814,6 @@ for (i in seq_along(n_multiple_ties_list)) {
     non_overlapping_edges <- list_df[1:rownum-1,]
     non_overlapping_edges <- non_overlapping_edges[!duplicated(non_overlapping_edges[,c("terminus", "Actor_code", "Tie_code", "ACTOR-PERSON", "TIE-PERSON")], fromLast = TRUE),]
     non_overlapping_edges <- non_overlapping_edges[non_overlapping_edges$Tie_code!=list_df$Tie_code[rownum],]
-#    non_overlapping_edge_weights <- non_overlapping_edges$edge_weights[length(non_overlapping_edges$edge_weights)]
     non_overlapping_edge_weights <- non_overlapping_edges$edge_weights
     list_df2$edge_weights[rownum] <- sum(list_df$edge_weights[rownum], non_overlapping_edge_weights)
   }
@@ -950,9 +892,9 @@ end <- 17640
 
 QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_pers_anim_final <- compute.animation(QDC_pers_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_pers_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_pers_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_pers_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_pers_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 QDC_pers_anim2 <- QDC_pers_dyn
 
@@ -1162,13 +1104,12 @@ start <- 17619
 end <- 17899
 
 # Calculate animation
-#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
-# Trying to change aggregation_dur
+
 QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=1, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 QDC_text_anim2 <- QDC_text_dyn
 
@@ -1200,7 +1141,6 @@ render.d3movie(QDC_text_anim2,
                vertex.tooltip = function(slice) {slice %v% 'Actor_text'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
                edge.col = "edge_colour",
-#               edge.col = function(slice){slice %e% 'sent_to_rousseau'},
                vertex.border="#ffffff",
                vertex.col = "vertex_colour",
                xlab = year_label,
