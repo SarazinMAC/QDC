@@ -264,7 +264,6 @@ interventions$vline_labels <- c("La Chalotais (1763)", "Borrelly (1768)")
 
 # load fonts
 
-#font_import()
 loadfonts(device = "win")
 
 # Create dataframe with just La Chalotais and Borrely
@@ -356,9 +355,7 @@ for (membership in membership_by_count) {
     colours_comm[names(colours_comm)==community_leaders[i]] <- community_leader_colours_comm[i]
     colours_borders[names(colours_borders)==community_leaders[i]] <- community_leader_colours_comm[i]
   }
-  # Thought I needed to set community colours, but apparently they are linked to the node colours
-#  colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders_communities)]
-#  colours_borders <- rainbow(10, alpha = 1)[seq_along(community_leaders_communities)]
+
   # Create title for visualisation
   plot_title <- paste0(cd_algorithm, " community visualisation (", 
                   substr(slice_to_extract, start = 1, stop = 4), 
@@ -512,7 +509,6 @@ outdegree_neg <- tSnaStats(QDC_dyn_neg, snafun = "degree", start = start_slice, 
 eigenvector_undirected <- tSnaStats(QDC_dyn_onset_62_undirected, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 eigenvector_inversed <- tSnaStats(QDC_dyn_onset_62_inversed, snafun = "evcent", start = start_slice, end = end_slice, time.interval = slice_interval, maxiter=1e7, use.eigen = F)
 
-#directed_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvdir")
 undirected_closeness <- tSnaStats(QDC_dyn_onset_62, snafun = "closeness", start = start_slice, end = end_slice, time.interval = slice_interval, cmode = "suminvundir", rescale = FALSE)
 
 # calculated directed closeness, but with ties inversed: Do actors receive ties direct or more distantly?
@@ -597,9 +593,7 @@ for (stat in stats_to_export) {
   colnames(stats_list[[stat]])[1] <- slice_or_year
 }
 
-#write_xlsx(stats_list, path = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.xlsx"))
-
-# Try transposing everything to make it more readable
+# Transpose most dfs to make output more readable
 
 stats_list_transposed <- list()
 stats_list_transposed[["net_stats"]] <- stats_list[["net_stats"]]
