@@ -149,7 +149,7 @@ for(row in 1:nrow(QDC_es)){
 # Set number of multiple ties sent/received by vertices as vertex attribute
 
 for(row in 1:nrow(n_multiple_ties_df)){
-  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'node_edge_weights',
+  activate.vertex.attribute(x = dyn_net, prefix = 'node_edge_weights',
                             value = (n_multiple_ties_df$node_edge_weights[row]),
                             onset=n_multiple_ties_df$onset[row],terminus=n_multiple_ties_df$terminus[row],
                             v=n_multiple_ties_df$Actor_code[row])
@@ -316,7 +316,7 @@ dev.off()
 
 # Combine community structures into one adjacency matrix per slice
 
-slice_to_extract <- "17634"
+slice_to_extract <- "17635"
 
 slice_memberships_combined <- lapply(all_memberships_combined, function(second_order_list) { second_order_list[[slice_to_extract]]})
 # Record the number of times that particular membership results have occurred, and export the visual 
@@ -391,10 +391,12 @@ for (membership in membership_by_count) {
   V(slice_to_plot)$name <- vertex_attr(slice_to_plot, "Actor_pers")
   E(slice_to_plot)$weight <- edge_attr(slice_to_plot, "edge_weights")
   slice_to_plot <- delete_edges(slice_to_plot, which(which_loop(slice_to_plot)))
+  V(slice_to_plot)$node_size <- node_size(slice = slice_to_plot, network_or_igraph = "igraph")*12
 #  slice_to_plot <- as.undirected(slice_to_plot, mode = "collapse")
   
   plot(x = communities_to_plot, y = slice_to_plot,
        vertex.label = V(slice_to_plot)$Actor_pers,
+       vertex.size = V(slice_to_plot)$node_size,
        edge.arrow.size = 0.125,
        edge.arrow.width = 3,
        edge.lty = c("solid", "dashed")[igraph::crossing(communities_to_plot, slice_to_plot) + 1],
@@ -412,7 +414,7 @@ for (membership in membership_by_count) {
 #  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours.png"), width = 2400, height = 1800, type = "png", bg = "white")
 #  tiff(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test.tiff"),
 #       width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
-  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours_2.jpeg"),
+  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours_node_size.jpeg"),
        width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
   print(vis)
   dev.off()

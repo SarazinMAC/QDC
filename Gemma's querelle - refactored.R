@@ -305,7 +305,6 @@ year_label <- function(s){
 }
 
 
-
 # Clean dataset of empty rows
 
 empty_rows <- apply(QDC_file, 1, function(x) {all(is.na(x))}) # records TRUE if the row is full of NAs
@@ -985,7 +984,7 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
 ### Make animation
 
 start <- 17619
-end <- 17899
+end <- 17640
 
 ## Trying to make it less bunched
 
@@ -1015,6 +1014,21 @@ year_label <- function(s){
   }
 }
 
+# Set node size in person net visuals - dynamic and static
+
+node_size <- function(slice, network_or_igraph = "network"){
+  if (network_or_igraph=="network") {
+    degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "node_edge_weights") 
+  } else if (network_or_igraph=="igraph") {
+    degree_value <- igraph::degree(slice, mode = "all", loops = TRUE) + vertex_attr(slice_to_plot, "node_edge_weights") 
+  }
+  return(
+    (10*(degree_value + 0.000001)/
+       (degree_value + 0.000001)*
+       (log(((degree_value+5)/100)+1)))
+  )
+}
+
 filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_13_testing.html"
 
 ## Creating ndtv visual without base network specified
@@ -1030,10 +1044,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
 #                               xlab = function(s){paste(trunc((QDC_pers_dyn$gal$slice.par$start+QDC_pers_dyn$gal$slice.par$interval*s)/10))},
                                xlab = year_label,
 #                               vertex.cex = function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.000001)/(sna::degree(slice, cmode = "freeman") + 0.000001)*(log(((sna::degree(slice, cmode = "freeman")+5)/100)+1)))},
-                                vertex.cex = function(slice){
-                                degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "node_edge_weights")
-                                (10*(degree_value + 0.000001)/(degree_value + 0.000001)*(log(((degree_value+5)/100)+1)))
-                              },
+                                vertex.cex = node_size,
                                #               vertex.cex = 0.8,
                                #               vertex.cex = function(slice){ 0.8*degree(slice)/degree(slice) + 0.000001},
 #                               edge.lwd = function(slice){log((slice %e% 'edge_weights')+1)*2},
