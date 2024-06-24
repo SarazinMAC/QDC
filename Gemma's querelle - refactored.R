@@ -46,241 +46,6 @@ QDC_62_89 <- QDC[which(QDC$Date>1761),]
 
 
 
-#### __Text-based Querelle ####
-
-#### ____Node database - for all potential text nodes (actor-texts, tie-texts, response texts) ####
-
-# Two steps: Create a database of all nodal attribute information, then create a list of actors (that both send and receive ties) and populate with nodal attributes
-## First create a single attribute record for every entry in Actor-text column (which normally includes all actors in tie text and response text)
-QDC_text <- subset(QDC, select=
-                     c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", 
-                       "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", 
-                       "Gender", "Response-TEXT 1", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2",
-                       "Place"))
-QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
-
-
-QDC_text_node_data <- as.data.frame(table(QDC_text$`ACTOR-TEXT`, QDC_text$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_text$Gender, QDC_text$Date)) #This creates a problem when nodes have missing data for any attribute; if they do, then it gives missing values to all attributes
-QDC_text_node_data <- QDC_text_node_data[QDC_text_node_data$Freq>0,1:4]
-colnames(QDC_text_node_data) <- c("Text_Name", "Actor_type", "Gender", "Date")
-
-
-
-
-## Now create list of actors that you want to use to populate the Node database
-QDC_text_nodes <- as.data.frame(unique(append(QDC_text$`ACTOR-TEXT`, c(QDC_text$`TIE-TEXT`, QDC_text$`Response-TEXT 1`, QDC_text$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`))))
-QDC_text_nodes <- data.frame(QDC_text_nodes[!is.na(QDC_text_nodes)])
-colnames(QDC_text_nodes) <- "Actors"
-
-## Now fill with attributes using matching
-QDC_text_nodes$Actor_type <- QDC_text_node_data$Actor_type[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$Gender <- QDC_text_node_data$Gender[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$Date <- QDC_text_node_data$Date[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$Actor_type <- as.numeric(QDC_text_nodes$Actor_type)
-QDC_text_nodes$Actor_type[which(is.na(QDC_text_nodes$Actor_type))] <- 99 #missing data coded 99
-QDC_text_nodes$Gender <- as.numeric(QDC_text_nodes$Gender)
-QDC_text_nodes$Gender[which(is.na(QDC_text_nodes$Gender))] <- 99 #missing data coded 99
-QDC_text_nodes$Date <- as.numeric(as.character(QDC_text_nodes$Date))
-QDC_text_nodes$Date[which(is.na(QDC_text_nodes$Date))] <- 99 #missing data coded 99
-colnames(QDC_text_nodes) <- c("Text_Name", "Actor_type", "Gender", "Date")
-QDC_text_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_nodes$Actor_type]
-
-QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
-QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
-QDC_text_nodes <- QDC_text_nodes[order(QDC_text_nodes$Text_Name),]
-
-
-#### ____Create network object ####
-
-QDC_text <- subset(QDC_62_89, select=c("ACTOR-TEXT", "TIE-TEXT", "Quality", "Date", "order"))
-QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
-QDC_text <- QDC_text[!is.na(QDC_text$`TIE-TEXT`),]
-QDC_text <- QDC_text[!is.na(QDC_text$Quality),]
-QDC_text[,"Line_type"] <- "solid"
-
-### negative 'Quality' values mess with the network package. Let's just make all Quality values positive
-QDC_text$Quality <- QDC_text$Quality + 3
-QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
-
-### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
-
-QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")]
-QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
-QDC_text_resp <- QDC_text_resp[!duplicated(QDC_text_resp[,c("ACTOR-TEXT", "Response-TEXT 1", "Date")]),]
-
-QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")]
-QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
-QDC_text_resp_2 <- QDC_text_resp_2[!duplicated(QDC_text_resp_2[,c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date")]),]
-
-colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
-colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
-
-QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
-
-QDC_text_resp[,"Quality"] <- 9
-QDC_text_resp[,"Line_type"] <- "dashed"
-
-QDC_text <- rbind(QDC_text, QDC_text_resp)
-rm(QDC_text_resp_2, QDC_text_resp)
-QDC_text <- QDC_text[order(QDC_text$order),]
-
-QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
-#QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
-
-### Creating node attr database - note, you need list of vertices to do this.
-
-QDC_text_attr <- as.data.frame(QDC_text_net %v% "vertex.names")
-colnames(QDC_text_attr) <- "Text_Name"
-## Import Actor type
-QDC_text_attr$Text_Name <- as.character(QDC_text_attr$Text_Name)
-QDC_text_attr[,"Actor_type"] <- QDC_text_nodes$Actor_type[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
-QDC_text_attr$Type_col <- QDC_text_nodes$Type_col[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
-
-## Create a vertex attribute for the number of sides of the vertex - if the actor is an authority or institution (i.e. actor type 2), then a pentagon, otherwise a circle
-QDC_text_attr[,"Vertex_sides"] <- ifelse(QDC_text_attr$Actor_type==2, 4, 50) # 50 means 50 sides, which for some reason ends up appearing as a circle
-## Create label - only for D'Alembert (1753), La Chalotais (1763), and Rousseau (1762)
-QDC_text_attr[, "Label"] <- ifelse(QDC_text_attr$Text_Name=="D'Alembert (1753)"|QDC_text_attr$Text_Name=="La Chalotais (1763)"|QDC_text_attr$Text_Name=="Rousseau (1762)", QDC_text_attr$Text_Name, "")
-## Create vertex attribute for the corpus number of the text in question.
-QDC_text_attr[,"Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text_attr$Text_Name), QDC_text_nodes$Text_Name)]
-
-## Check that actors in the node df and network are in the same order
-all(QDC_text_net %v% "vertex.names"==QDC_text_attr$Text_Name)
-
-## Create tie name edge variable for network object
-
-QDC_text[, "Actor_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text$`ACTOR-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text[, "Tie_Corpus_num"] <- QDC_text_nodes$Corpus_num[match(unlist(QDC_text$`TIE-TEXT`), QDC_text_nodes$Text_Name)]
-QDC_text[, "Tie_name"] <- paste0(QDC_text$Actor_Corpus_num, " &#8594 ", QDC_text$Tie_Corpus_num)
-QDC_text$Actor_Corpus_num=NULL; QDC_text$Tie_Corpus_num=NULL
-
-
-## NOW finally create network object
-
-QDC_text_net <- network(QDC_text, matrix.type= "edgelist", vertex.attr = QDC_text_attr, loops=F, multiple=F, ignore.eval = F)
-
-## Colour according to actor type
-QDC_text_net %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net %v% "Actor_type"]
-
-## Colour according to tie quality
-QDC_text_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net %e% "Quality"]
-
-
-
-
-#### __Person-based Querelle ####
-
-
-
-#### ____Node database - for all potential person nodes (actor-persons, tie-persons, response persons) ####
-
-## First create a single attribute record for every entry in Actor-text column (which normally includes all actors in tie text and response text)
-QDC_pers <- subset(QDC, select=c("ACTOR-PERSON", "TIE-PERSON", "Quality", "Date", "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", "Gender", "Response-PERSON 1", "Response-PERSON 2"))
-QDC_pers <- QDC_pers[!is.na(QDC_pers$`ACTOR-PERSON`),]
-
-QDC_pers_nodes <- as.data.frame(table(QDC_pers$`ACTOR-PERSON`, QDC_pers$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_pers$Gender, QDC_pers$Date))
-QDC_pers_nodes <- QDC_pers_nodes[QDC_pers_nodes$Freq>0,1:4]
-colnames(QDC_pers_nodes) <- c("Pers_Name", "Actor_type", "Gender", "Date")
-
-
-
-## Now create list of actors that you want to use to populate the Node database
-x <- as.data.frame(unique(append(QDC_pers$`ACTOR-PERSON`, c(QDC_pers$`TIE-PERSON`, QDC_pers$`Response-PERSON 1`, QDC_pers$`Response-PERSON 2`))))
-x <- data.frame(x[!is.na(x)])
-colnames(x) <- "Actors"
-
-## Now fill with attributes using matching
-x[,2] <- QDC_pers_nodes$Actor_type[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
-x[,3] <- QDC_pers_nodes$Gender[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
-x[,4] <- QDC_pers_nodes$Date[match(unlist(x$Actors), QDC_pers_nodes$Pers_Name)]
-x$V2 <- as.numeric(x$V2)
-x$V2[which(is.na(x$V2))] <- 99 #missing data coded 99
-x$V3 <- as.numeric(x$V3)
-x$V3[which(is.na(x$V3))] <- 99 #missing data coded 99
-x$V4 <- as.numeric(as.character(x$V4))
-x$V4[which(is.na(x$V4))] <- 99 #missing data coded 99
-QDC_pers_nodes <- x
-colnames(QDC_pers_nodes) <- c("Pers_Name", "Actor_type", "Gender", "Date")
-QDC_pers_nodes$Pers_Name <- as.character(QDC_pers_nodes$Pers_Name)
-QDC_pers_nodes <- QDC_pers_nodes[order(QDC_pers_nodes$Pers_Name),]
-QDC_pers_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_pers_nodes$Actor_type]
-rm(x)
-
-#### ____Node attributes for network object ####
-
-#QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
-
-
-#### ____network object ####
-
-QDC_pers <- subset(QDC_62_89, select=c("ACTOR-PERSON", "TIE-PERSON", "Quality", "Date"))
-QDC_pers <- QDC_pers[!is.na(QDC_pers$`ACTOR-PERSON`),]
-QDC_pers <- QDC_pers[!is.na(QDC_pers$`TIE-PERSON`),]
-QDC_pers <- QDC_pers[!is.na(QDC_pers$Quality),]
-QDC_pers[,"Line_type"] <- "solid"
-
-### negative 'Quality' values screw with the network package. Let's just make all Quality values positive
-QDC_pers$Quality <- QDC_pers$Quality + 3
-QDC_pers$Quality[QDC_pers$Quality>6] <- QDC_pers$Quality[QDC_pers$Quality>6]-1
-
-### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2 # Note: have to add Actor text in there so the "unique" command works, as La Chalotais sends a response to the Parlement de Bretagne twice but in two different texts (then delete the variable)
-
-QDC_pers_resp <- data.frame(QDC$`ACTOR-PERSON`, QDC$`Response-PERSON 1`, QDC$`ACTOR-TEXT`, QDC$`Response-TEXT 1`,  QDC$Date)
-QDC_pers_resp <- QDC_pers_resp[!is.na(QDC_pers_resp$QDC..Response.PERSON.1.),]
-QDC_pers_resp <- unique(QDC_pers_resp)
-QDC_pers_resp$QDC..ACTOR.TEXT.=NULL; QDC_pers_resp$QDC..Response.TEXT.1.=NULL
-
-QDC_pers_resp_2 <- data.frame(QDC$`ACTOR-PERSON`, QDC$`Response-PERSON 2`, QDC$`ACTOR-TEXT`, QDC$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`, QDC$Date)
-QDC_pers_resp_2 <- QDC_pers_resp_2[!is.na(QDC_pers_resp_2$QDC..Response.PERSON.2.),]
-QDC_pers_resp_2 <- unique(QDC_pers_resp_2)
-QDC_pers_resp_2$QDC..ACTOR.TEXT.=NULL; QDC_pers_resp_2$QDC..Does.it.respond.to.a.SECOND.catalyst..If.so..which..Response.TEXT.2.=NULL
-
-colnames(QDC_pers_resp) <- c("ACTOR-PERSON", "TIE-PERSON", "Date"); colnames(QDC_pers_resp_2) <- colnames(QDC_pers_resp)
-
-QDC_pers_resp <- rbind(QDC_pers_resp, QDC_pers_resp_2)
-
-QDC_pers_resp[,"Quality"] <- 9
-QDC_pers_resp[,"Line_type"] <- "dashed"
-
-QDC_pers <- rbind(QDC_pers, QDC_pers_resp)
-rm(QDC_pers_resp_2, QDC_pers_resp)
-
-
-##Note: Loops are allowed; if they aren't, just delete them from the DB - find out which ones they are here to them here: x <- QDC_pers[QDC_pers$`ACTOR-PERSON`==QDC_pers$`TIE-PERSON`,]
-##Note: There are also multiple ties. FOR NDTV DYNAMIC VIS (which can't take them into account anyways): Delete
-x <- QDC_pers[duplicated(QDC_pers[,c("ACTOR-PERSON", "TIE-PERSON")]),] # There are quite a few, and not only self-ties or ties from journals...
-QDC_pers <- QDC_pers[!duplicated(QDC_pers[,c("ACTOR-PERSON", "TIE-PERSON")]),] # This deletes them
-
-QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", loops=T, multiple=F, ignore.eval = F)
-
-### Creating node attr database - note, you need list of vertices to do this.
-
-QDC_pers_attr <- as.data.frame(QDC_pers_net %v% "vertex.names")
-colnames(QDC_pers_attr) <- "Pers_Name"
-## Import Actor type
-QDC_pers_attr$Pers_Name <- as.character(QDC_pers_attr$Pers_Name)
-QDC_pers_attr[,"Actor_type"] <- QDC_pers_nodes$Actor_type[match(unlist(QDC_pers_attr$Pers_Name), QDC_pers_nodes$Pers_Name)]
-## Attribute for node colour
-QDC_pers_attr$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_pers_attr$Actor_type]
-## Create a vertex attribute for the number of sides of the vertex - if the actor is an authority or institution (i.e. actor type 2), then a pentagon, otherwise a circle
-QDC_pers_attr[,"Vertex_sides"] <- ifelse(QDC_pers_attr$Actor_type==2, 4, 50) # 50 means 50 sides, which for some reason ends up appearing as a circle
-## Create label - only for D'Alembert, La Chalotais, and Rousseau
-QDC_pers_attr[, "Label"] <- ifelse(QDC_pers_attr$Pers_Name=="D'Alembert"|QDC_pers_attr$Pers_Name=="La Chalotais"|QDC_pers_attr$Pers_Name=="Rousseau", QDC_pers_attr$Pers_Name, "")
-## Check that actors in the node df and network are in the same order
-all(QDC_pers_net %v% "vertex.names"==QDC_pers_attr$Pers_Name)
-
-## NOW finally create network object
-
-QDC_pers_net <- network(QDC_pers, matrix.type= "edgelist", vertex.attr = QDC_pers_attr, loops=TRUE, multiple=F, ignore.eval = F)
-
-## Colour according to actor type
-QDC_pers_net %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_pers_net %v% "Actor_type"]
-
-## Colour according to tie quality
-QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_pers_net %e% "Quality"]
-
-
-
-
 
 
 
@@ -288,6 +53,11 @@ QDC_pers_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartre
 
 
 ##### ____Network Dynamic Object - Person-based network #####
+
+# Import static network creation scripts
+
+source(paste0(Data_path, "create_static_text_net.R"))
+source(paste0(Data_path, "create_static_pers_net.R"))
 
 # Create vertex spell
 
@@ -708,6 +478,10 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
 
 
 #### ____Network Dynamic Object - text-based network ####
+
+# Import static network creation scripts
+
+source(paste0(Data_path, "create_static_text_net.R"))
 
 # Create vertex spell
 ## First, QDC actors
