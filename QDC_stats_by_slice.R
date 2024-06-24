@@ -91,21 +91,11 @@ as_igraph_net_slice <- function(dynamic_net, v_name_attr, slice, retain_vertices
 # assign correct onsets to pre_QDC edges
 QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
 
-# Divide onsets and termini by 10
-#TODO: Fix this bodge to make it more sustainable
-
-#if (any(QDC_vs$onset > 10000)) {
-#  QDC_vs$onset <- trunc(QDC_vs$onset/10); QDC_vs$terminus <- trunc(QDC_vs$terminus/10)
-#  QDC_es$onset <- trunc(QDC_es$onset/10); QDC_es$terminus <- trunc(QDC_es$terminus/10)
-#}
-
 # recreate QDC_dyn object
 
 QDC_vs <- QDC_vs[order(QDC_vs$Actor_code),]
 
 QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
-
-
 
 
 
@@ -148,13 +138,21 @@ QDC_es$Qual_col_inc_pre_qdc[QDC_es$Qual_col_inc_pre_qdc=="grey90"] <- c("red", "
                                                                         "orange", "grey61", "grey61", "grey15")[QDC_es$Quality[QDC_es$Qual_col_inc_pre_qdc=="grey90"]]
 
 for(row in 1:nrow(QDC_es)){
-  # get the id of the edge from its tail and head
   edge_id <- get.edgeIDs(dyn_net,v=QDC_es$Actor_code[row],
                          alter=QDC_es$Tie_code[row])
   activate.edge.attribute(dyn_net,'edge_weights',QDC_es$edge_weights[row],
                           onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
   activate.edge.attribute(dyn_net,'Qual_col',QDC_es$Qual_col_inc_pre_qdc[row],
                           onset=QDC_es$onset[row],terminus=QDC_es$terminus[row],e=edge_id)
+}
+
+# Set number of multiple ties sent/received by vertices as vertex attribute
+
+for(row in 1:nrow(n_multiple_ties_df)){
+  activate.vertex.attribute(x = QDC_pers_dyn, prefix = 'node_edge_weights',
+                            value = (n_multiple_ties_df$node_edge_weights[row]),
+                            onset=n_multiple_ties_df$onset[row],terminus=n_multiple_ties_df$terminus[row],
+                            v=n_multiple_ties_df$Actor_code[row])
 }
 
 
@@ -422,19 +420,6 @@ for (membership in membership_by_count) {
 
 
 
-
-# Create dynamic network objects
-## Note: not needed with line above
-
-#if (text_or_pers == "text") {
-#  QDC_dyn <- QDC_text_dyn
-#} else if (text_or_pers == "pers") {
-#  QDC_dyn <- QDC_pers_dyn
-#}
-
-# Add multiple edges - note, should only be relevant with person network; might even return an error with text net
-#QDC_dyn <- add_multiple_edges_active(netdyn = QDC_dyn)
-
 ### tSnaStats doesn't seem to work with changing vertex activity - so recreate network with all nodes present in 17620
 
 QDC_vs_onset_62 <- QDC_vs
@@ -442,6 +427,8 @@ QDC_vs_onset_62$onset <- start_slice
 
 ## Remove the base_net argument below as otherwise the tSnaStats function ignores edge spells 
 QDC_dyn_onset_62 <- networkDynamic(vertex.spells = QDC_vs_onset_62[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)
+
+# Add multiple edges - note, should only be relevant with person network; might even return an error with text net
 if (text_or_pers == "pers") {
   QDC_dyn_onset_62 <- add_multiple_edges_active(netdyn = QDC_dyn_onset_62)
 }
