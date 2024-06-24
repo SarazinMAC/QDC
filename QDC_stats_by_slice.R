@@ -99,9 +99,6 @@ QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
 #  QDC_es$onset <- trunc(QDC_es$onset/10); QDC_es$terminus <- trunc(QDC_es$terminus/10)
 #}
 
-#QDC_vs <- QDC_vs[!duplicated(QDC_vs[,c("Actor_code")]),]
-#QDC_es <- QDC_es[!duplicated(QDC_es[,c("Actor_code", "Tie_code")]),]
-
 # recreate QDC_dyn object
 
 QDC_vs <- QDC_vs[order(QDC_vs$Actor_code),]
@@ -125,43 +122,6 @@ if (text_or_pers == "text") {
                                                     Text_or_pers_name = "Pers_Name",
                                                     actor_colname = "Actor_pers")
 }
-
-
-# Calculate clustering coefficient at a particular point in time
-
-calculate_clustering_coefficient <- function(dyn_net = QDC_dyn, .start_slice = start_slice, .end_slice = end_slice,
-                                             .slice_interval = slice_interval, attr_dyn_df, .text_or_pers = text_or_pers) {
-  
-  # Set constants
-  # Number of slices
-  slices <- seq(from = .start_slice, to = .end_slice, by = .slice_interval)
-  
-  # Actor names
-  for (col in colnames(attr_dyn_df)) {
-    dyn_net %v% col <- attr_dyn_df[[col]]
-  }
-  
-  if (text_or_pers == "text") {
-  actor_name <- dyn_net %v% "Text_Name"
-  } else if (text_or_pers == "pers") {
-    actor_name <- dyn_net %v% "Pers_Name"
-  }
-  
-  # Create initial df
-  CC_stats <- as.data.frame(actor_name)
-  
-  for (.slice in slices) {
-    net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = TRUE)
-    net_slice <- asIgraph(net_slice)
-    CC <- transitivity(graph = net_slice, type = "localundirected")
-    CC_stats <- cbind(CC_stats, .slice = CC)
-  }
-  colnames(CC_stats)[2:ncol(CC_stats)] <- slices
-  return(CC_stats)
-}
-
-
-rio::export(CC_stats, file = paste0(export_path,"Clustering_coefficient_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.xlsx"))
 
 
 # Extract community structure / modularity score of a network at a time point
@@ -459,25 +419,6 @@ for (membership in membership_by_count) {
   print(vis)
   dev.off()
 }
-
-
-# Calculate Bonacich alpha Centrality
-
-alphacent_stats <- data.frame(dyn_net %v% "Actor_pers")
-
-for (.slice in as.character(slices)) {
-  net_slice <- as_igraph_net_slice(dynamic_net = dyn_net, v_name_attr = "Actor_pers", slice = as.numeric(.slice), retain_vertices = TRUE)
-  #net_slice <- simplify(net_slice, remove.multiple = TRUE, remove.loops = TRUE)
-  #net_slice <- delete.vertices(net_slice, degree(net_slice)==0)
-  E(net_slice)$weight <- edge_attr(net_slice, "edge_weights")
-  net_slice <- delete_edges(net_slice, which(which_loop(net_slice)))
-  
-  alphacent_stats[[.slice]] <- alpha_centrality(net_slice, alpha = 0.4)
-  } 
-colnames(alphacent_stats)[1] <- "actor_name"
-
-rio::export(alphacent_stats, file = paste0(export_path,"alpha_centrality_by_", slice_or_year, "_", date, "_", text_or_pers,"_net.csv"))
-
 
 
 
