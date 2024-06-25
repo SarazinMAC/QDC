@@ -23,8 +23,6 @@ original_QDC_es <- QDC_es
 
 export_path <- Data_path
 
-text_or_pers <- "pers"
-
 date <- format(Sys.Date(), "%Y_%m_%d")
 
 # TODO: Make the below work with both the text and person network (note last column "Actor_pers")
@@ -323,8 +321,8 @@ for (membership in membership_by_count) {
   communities_to_plot <- all_communities_combined[[community]][[slice_to_extract]]
   # set consistent colours for communities, based on presence of key actors ("community_leaders")
   # NOTE: This works in for slices 17634 qnd 17635, when Rivard community merges into Parlement de Paris - unsure if it works in other situations
-#  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvétius", "Pellicier", "Pluche", "Louis XV", "Daragon")
-  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvétius", "D'Alembert", "Daragon")
+#  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvï¿½tius", "Pellicier", "Pluche", "Louis XV", "Daragon")
+  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvï¿½tius", "D'Alembert", "Daragon")
 #  community_leader_colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders)]
   community_leader_colours_comm <- pal(10, alpha = 0.5)[seq_along(community_leaders)]
 #  community_leader_colours_comm <- c25_comm[seq_along(community_leaders)]
@@ -633,13 +631,13 @@ degree_data <- as.data.frame(degree_data)
 # create actor labels to display on the visualisation
 #if (text_or_pers=="pers") {
 #  if (measure=="degree") {
-#    actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville")
-#    actor_labels <- c("Rousseau (16.7%)", " Mercure (8.6%)", " Année\nlittéraire (11.4%)", "Rolland\nd'Erceville (9.6%)")
+#    actors_to_label <- c("Rousseau", "Mercure", "Annï¿½e littï¿½raire", "Rolland d'Erceville")
+#    actor_labels <- c("Rousseau (16.7%)", " Mercure (8.6%)", " Annï¿½e\nlittï¿½raire (11.4%)", "Rolland\nd'Erceville (9.6%)")
 #    label_y_position <- c(2, 2, 4, 5.5)
 #    label_hjust <- c(0.7, 0.5, 0.5, 0.5)
 #  } else if (measure=="outdegree") {
-#    actors_to_label <- c("Rousseau", "Mercure", "Année littéraire", "Rolland d'Erceville", "Borrelly", "Rivard")
-#    actor_labels <- c("Rousseau (0%)", "Mercure (8.4%)", "Année\nlittéraire (10.6%)", "Rolland\nd'Erceville (8.9%)", "Borrelly (5.3%)", "Rivard (7.6%)")
+#    actors_to_label <- c("Rousseau", "Mercure", "Annï¿½e littï¿½raire", "Rolland d'Erceville", "Borrelly", "Rivard")
+#    actor_labels <- c("Rousseau (0%)", "Mercure (8.4%)", "Annï¿½e\nlittï¿½raire (10.6%)", "Rolland\nd'Erceville (8.9%)", "Borrelly (5.3%)", "Rivard (7.6%)")
 #    label_y_position <- c(2.5, 4, 6, 7.5, 2, 2)
 #    label_hjust <- c(0.4, 0.5, 0.5, 0.5, 0.5, 0.5)
 #  }
