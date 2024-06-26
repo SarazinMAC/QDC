@@ -117,6 +117,7 @@ for (char in chars[,1]) {
   QDC_text_dyn %v% "Actor_text" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
 }; rm(char)
 
+if (produce_dynamic_visuals == TRUE) {
 
 ##### Create dynamic visual #####
 
@@ -169,3 +170,4 @@ render.d3movie(QDC_text_anim2,
                output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
+}

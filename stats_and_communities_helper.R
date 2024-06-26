@@ -4,7 +4,6 @@
 
 library(igraph)
 library(tsna)
-library(writexl)
 library(tergm)
 library(intergraph)
 library(dplyr)
@@ -13,7 +12,22 @@ library(data.table)
 library(ggplot2)
 library(extrafont)
 
+## Set global options
 options(scipen = 999)
+
+## import files creating dynamic networks
+
+if(text_or_pers=="pers") {
+  
+  # Produce the dynamic person network
+  source(paste0(Data_path, "produce_dynamic_pers_network.R"))
+  
+} else if (text_or_pers=="text") {
+  
+  # Produce the dynamic text network
+  source(paste0(Data_path, "produce_dynamic_text_network.R"))
+}
+
 
 ## set configurable values
 

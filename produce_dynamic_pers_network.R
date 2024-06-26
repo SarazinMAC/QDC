@@ -323,8 +323,8 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
   
 }
 
-
-
+if (produce_dynamic_visuals == TRUE) {
+  
 ### Make animation
 
 ## Trying to make it less bunched
@@ -390,5 +390,6 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                verbose=TRUE)
 
 
+}
 
 
