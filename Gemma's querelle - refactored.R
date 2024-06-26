@@ -22,7 +22,7 @@ slice_or_year <- "slice" # write "slice" or "year" here
 # While the end slice is 17899 for the "slice" option and 1789 for the "year" option
 
 start_slice <- 17619
-end_slice <- 17640
+end_slice <- 17899
 slice_interval <- 1 # this value ordinarily does not change.
 
 
@@ -32,14 +32,16 @@ text_or_pers <- "text" # write "text" or "pers" here
 
 # Do you want to produce dynamic visualisations from this network?
 
-produce_dynamic_visuals <- TRUE # will produce dynamic visuals if value is TRUE, otherwise not
+produce_dynamic_visuals <- FALSE # will produce dynamic visuals if value is TRUE, otherwise not
 
 # Do you want to produce slice-by-slice or year-by-year statistics from this network?
 
 produce_statistics_by_slice_or_year <- FALSE # will produce statistics if value is TRUE, otherwise not
 
+# Do you want to produce a histogram of centrality distributions from this network?
 
-
+produce_centrality_histogram <- TRUE # will produce histogram if value is TRUE, otherwise not
+histogram_measure <- "outdegree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
 
 
 
@@ -71,6 +73,11 @@ QDC$order <- 1:nrow(QDC)
 ## Restricting dataset to 1762 - 1789
 QDC_62_89 <- QDC[which(QDC$Date>1761),]
 
+
+
+
+##### Run files #####
+
 if (produce_dynamic_visuals==TRUE) {
   
   if(text_or_pers=="pers") {
@@ -85,7 +92,9 @@ if (produce_dynamic_visuals==TRUE) {
   }
 }
 
-
+if (produce_centrality_histogram == TRUE) {
+  source(paste0(Data_path, "QDC_stats_by_slice.R"))
+}
 
 
 
