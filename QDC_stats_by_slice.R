@@ -15,10 +15,6 @@ library(extrafont)
 
 options(scipen = 999)
 
-## Create reference df
-
-original_QDC_es <- QDC_es
-
 ## set configurable values
 
 export_path <- Data_path
@@ -76,7 +72,7 @@ as_igraph_net_slice <- function(dynamic_net, v_name_attr, slice, retain_vertices
 
 
 # assign correct onsets to pre_QDC edges
-QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = original_QDC_es)
+QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es)
 
 # recreate QDC_dyn object
 
@@ -90,10 +86,6 @@ QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:
 dyn_net <- QDC_dyn
 
 attr_dyn_df <- QDC_vs[,5:ncol(QDC_vs)]
-
-par(mfrow=c(2,2), mar = c(3, 0, 3, 0))
-
-par(mfrow=c(1,1), mar = c(3, 0, 3, 0))
 
 # Actor names
 for (col in colnames(attr_dyn_df)) {
@@ -133,8 +125,6 @@ for(row in 1:nrow(n_multiple_ties_df)){
 
 slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
-plot <- FALSE
-
 slices <- c(17634, 17635)
 all_community_sizes <- list()
 
@@ -165,17 +155,11 @@ for (.slice in slices){
   } else {
     stop(paste0(cd_algorithm, " is an invalid community detection algorithm! Valid values are 'Louvain' and 'Leiden'"))
   }
-  # Check whether running Leiden as iteration after Louvain produces different results
+  # Check whether Louvain produces badly connected communities (by running Leiden as iteration after Louvain)
 #  membership <- membership(communities)
 #  communities <- cluster_leiden(net_slice, objective_function = "modularity", n_iterations = 10, initial_membership = membership)
   all_communities[[as.character(.slice)]] <- communities
   all_memberships[[as.character(.slice)]] <- membership(communities)
-  if (plot) {
-    plot(x = communities, y = net_slice,
-         vertex.label = V(net_slice)$Actor_pers)
-    title(.slice, cex.main = 3)
-    vis <- recordPlot()
-  }
   community_sizes <- sizes(communities)
   all_community_sizes[[as.character(.slice)]] <- community_sizes
   if (cd_algorithm == "Louvain") {
@@ -219,11 +203,6 @@ all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combi
 # Export dataframe
 rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats_no_loops.xlsx"), rowNames = FALSE)
 
-#Export visual
-
-Cairo(file = paste0(export_path, "Communities - ", year, ".png"), width = 2400, height = 1800, type = "png", bg = "white")
-print(vis)
-dev.off()
 
 
 
