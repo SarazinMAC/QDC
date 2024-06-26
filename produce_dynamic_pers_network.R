@@ -166,12 +166,6 @@ QDC_es_dynamic_vis <- QDC_es
 
 QDC_es_dynamic_vis$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es_dynamic_vis$Quality]
 
-if (slice_or_year == "slice") {
-  start_slice <- 17620
-} else if (slice_or_year == "year") {
-  start_slice <- 1762
-}
-
 QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vis, .start_slice = start_slice)
 
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)

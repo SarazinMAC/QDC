@@ -28,7 +28,7 @@ slice_interval <- 1 # this value ordinarily does not change.
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "pers" # write "text" or "pers" here
+text_or_pers <- "text" # write "text" or "pers" here
 
 # Do you want to produce dynamic visualisations from this network?
 

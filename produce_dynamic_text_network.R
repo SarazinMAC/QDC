@@ -59,12 +59,6 @@ QDC_es_dynamic_vis <- QDC_es
 
 QDC_es_dynamic_vis$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_es_dynamic_vis$Quality]
 
-if (slice_or_year == "slice") {
-  start_slice <- 17620
-} else if (slice_or_year == "year") {
-  start_slice <- 1762
-}
-
 QDC_es_dynamic_vis <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es_dynamic_vis, .start_slice = start_slice)
 
 QDC_es_dynamic_vis <- rbind(QDC_pre_62_edges, QDC_es_dynamic_vis)
@@ -128,24 +122,21 @@ for (char in chars[,1]) {
 
 ### Classic solution (nodes are not present from the beginning) but with node size weighted by indegree
 
-start <- 17619
-end <- 17640
-
 # Calculate animation
 
-QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start_slice, end=end_slice, interval=slice_interval, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim_final <- compute.animation(QDC_text_dyn, slice.par=list(start=end_slice, end=end_slice, interval=slice_interval, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
-#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start, end=end, interval=1, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
+#QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start_slice, end=end_slice, interval=slice_interval, aggregate.dur=0, rule="any"), animation.mode = "kamadakawai", seed.coords = matrix(data = c(get.vertex.attribute.active(QDC_text_anim_final, "animation.x", at = end_slice), get.vertex.attribute.active(QDC_text_anim_final, "animation.y", at = end_slice)), ncol = 2), chain.direction = "reverse", default.dist = 6, verbose = TRUE)
 
 QDC_text_anim2 <- QDC_text_dyn
 
-for (i in seq(from = start,to = end, by=1)) {
+for (i in seq(from = start_slice,to = end_slice, by=1)) {
   activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/3.5)
 }
 
-for (i in seq(from = start,to = end, by=1)) {
+for (i in seq(from = start_slice,to = end_slice, by=1)) {
   activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/3.5)
 }
 
@@ -165,7 +156,7 @@ render.d3movie(QDC_text_anim2,
                #render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
                displaylabels = FALSE,
-               plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start/10), "-", trunc(end/10))),
+               plot.par = list(bg="white", mar=c(0,0,0,0), main=paste0("Querelle des collèges, ", trunc(start_slice/10), "-", trunc(end_slice/10))),
                vertex.tooltip = function(slice) {slice %v% 'Actor_text'},
                edge.tooltip = function(slice){slice %e% 'Tie_name'},
                edge.col = "edge_colour",
