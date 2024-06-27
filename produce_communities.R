@@ -44,23 +44,23 @@ for(row in 1:nrow(n_multiple_ties_df)){
 
 slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
-slices <- c(17634, 17635)
+#slices <- c(17634, 17635)
 
 all_community_sizes <- list()
-
 all_community_stats_combined <- list()
 all_communities_combined <- list()
 all_memberships_combined <- list()
 
-number_of_iterations <- 1000
+number_of_iterations <- 10
 
 for (i in 1:number_of_iterations) {
-  seed <- set.seed(i)
+  set.seed(i)
   all_communities <- list()
   all_memberships <- list()
   all_community_stats <- list()
   for (.slice in slices){
-    net_slice <- network.collapse(dyn_net, at = .slice, rule = "any", active.default = FALSE, retain.all.vertices = FALSE)
+    net_slice <- network.collapse(dyn_net, at = .slice, rule = "any",
+                                  active.default = FALSE, retain.all.vertices = FALSE)
     net_slice <- asIgraph(net_slice)
     V(net_slice)$name <- vertex_attr(net_slice, "Actor_pers")
     E(net_slice)$weight <- edge_attr(net_slice, "edge_weights")
@@ -81,27 +81,15 @@ for (i in 1:number_of_iterations) {
     all_memberships[[as.character(.slice)]] <- membership(communities)
     community_sizes <- sizes(communities)
     all_community_sizes[[as.character(.slice)]] <- community_sizes
-    if (cd_algorithm == "Louvain") {
-      community_stats <- c("slice" = .slice,
-                           "N_communities" = length(communities),
-                           "net_modularity" = modularity(communities),
-                           "min_community_size" = min(community_sizes), 
-                           "max_community_size" = max(community_sizes),
-                           "mean_community_size" = mean(community_sizes),
-                           "sd_community_size" = sd(community_sizes)
-      )
-      all_community_stats[[as.character(.slice)]] <- community_stats
-    } else if (cd_algorithm == "Leiden") {
-      community_stats <- c("slice" = .slice,
-                           "N_communities" = length(communities),
-                           "net_modularity" = communities$quality,
-                           "min_community_size" = min(community_sizes), 
-                           "max_community_size" = max(community_sizes),
-                           "mean_community_size" = mean(community_sizes),
-                           "sd_community_size" = sd(community_sizes)
-      )
-      all_community_stats[[as.character(.slice)]] <- community_stats
-    }
+    community_stats <- c("slice" = .slice,
+                         "N_communities" = length(communities),
+                         "net_modularity" = ifelse(cd_algorithm == "Louvain", modularity(communities), communities$quality),
+                         "min_community_size" = min(community_sizes),
+                         "max_community_size" = max(community_sizes),
+                         "mean_community_size" = mean(community_sizes),
+                         "sd_community_size" = sd(community_sizes)
+    )
+    all_community_stats[[as.character(.slice)]] <- community_stats
   }
   all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
   
@@ -124,7 +112,7 @@ if (produce_modularity_stats == TRUE) {
   all_community_stats_combined_df <- as.data.frame(apply(all_community_stats_combined_df, c(1,2), mean))
   
   # Export dataframe
-  rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats_no_loops.xlsx"), rowNames = FALSE)
+  rio::export(all_community_stats_combined_df, paste0(export_path, "all_community_stats_", cd_algorithm,"_no_loops.xlsx"), rowNames = FALSE)
   
   # Run produce_modularity_stats.R
   source(paste0(Data_path, "produce_modularity_stats.R"))
