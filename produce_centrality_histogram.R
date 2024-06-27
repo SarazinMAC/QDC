@@ -77,7 +77,7 @@ vis <- ggplot(data = degree_data,
 
 #vis <- recordPlot()
 #Cairo(file = paste0(export_path, histogram_measure, "_centrality_", text_or_pers, "_network_node_no_labels.png"), width = 2400, height = 1800, type = "png", bg = "white")
-jpeg(filename = paste0(export_path, histogram_measure, "_centrality_", text_or_pers, "_network_node_no_labels.png"),
+jpeg(filename = paste0(export_path, histogram_measure, "_centrality_", text_or_pers, "_network.png"),
      width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
 print(vis)
 dev.off()
