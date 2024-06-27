@@ -35,8 +35,8 @@ interventions$vline_labels <- c("La Chalotais (1763)", "Borrelly (1768)")
 loadfonts(device = "win")
 
 # Create dataframe with just La Chalotais and Borrely
-ggplot(data = all_community_stats_combined_df[c(-1, -2),],
-       aes(x = slice, y = net_modularity)) +
+vis <- ggplot(data = all_community_stats_combined_df[c(-1, -2),],
+              aes(x = slice, y = net_modularity)) +
   geom_line(col = "black") +
   geom_vline(data = interventions, mapping = aes(xintercept = slice), linewidth = 0.4, color = "red", show.legend = FALSE) +
   #  geom_label(data = interventions, mapping = aes(x = slice, y = 0.66, label = vline_labels, hjust = 0), size = 10) +
@@ -50,7 +50,6 @@ ggplot(data = all_community_stats_combined_df[c(-1, -2),],
 
 # Export vis
 
-vis <- recordPlot()
 #Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
 jpeg(filename = paste0(export_path, "Network_modularity_", text_or_pers, "_network_", cd_algorithm, "_no_loops_no_labels.png"),
      width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)

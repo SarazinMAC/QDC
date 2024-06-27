@@ -40,12 +40,17 @@ produce_statistics_by_slice_or_year <- FALSE # will produce statistics if value 
 
 # Do you want to produce a histogram of centrality distributions from this network?
 
-produce_centrality_histogram <- TRUE # will produce histogram if value is TRUE, otherwise not
+produce_centrality_histogram <- FALSE # will produce histogram if value is TRUE, otherwise not
 histogram_measure <- "outdegree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
 
+# Community statistics and visualisations for slices 1763.4 and 1763.5
 
+# What community detection algorithm would you like to use to produce the statistics/visuals?
+cd_algorithm <- "Leiden" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
 
+# Do you want to produce modularity statistics of communities (both a line graph and excel file)?
 
+produce_modularity_stats <- TRUE # will produce modularity statistics if value is TRUE, otherwise not
 
 
 
@@ -96,6 +101,10 @@ if (produce_centrality_histogram == TRUE) {
   source(paste0(Data_path, "QDC_stats_by_slice.R"))
 }
 
+
+if (produce_modularity_stats == TRUE) {
+  source(paste0(Data_path, "produce_communities.R"))
+}
 
 
 

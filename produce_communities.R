@@ -4,6 +4,8 @@
 
 # Processing --------
 
+source(paste0(Data_path, "stats_and_communities_helper.R"))
+
 dyn_net <- QDC_dyn
 
 attr_dyn_df <- QDC_vs[,5:ncol(QDC_vs)]
@@ -40,16 +42,11 @@ for(row in 1:nrow(n_multiple_ties_df)){
 }
 
 
-#year <- 1789
-
-#slices <- c(year*10, year*10+3, year*10+6, year*10+8)
-
 slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
 slices <- c(17634, 17635)
-all_community_sizes <- list()
 
-cd_algorithm <- "Louvain"
+all_community_sizes <- list()
 
 all_community_stats_combined <- list()
 all_communities_combined <- list()
@@ -107,6 +104,8 @@ for (i in 1:number_of_iterations) {
     }
   }
   all_community_stats <- rbindlist(lapply(all_community_stats, as.data.frame.list))
+  
+  # Returned outputs
   all_community_stats_combined[[as.character(i)]] <- all_community_stats
   all_communities_combined[[as.character(i)]] <- all_communities
   all_memberships_combined[[as.character(i)]] <- all_memberships
@@ -131,3 +130,8 @@ if (produce_modularity_stats == TRUE) {
   source(paste0(Data_path, "produce_modularity_stats.R"))
 }
 
+if (produce_community_visuals == TRUE) {
+  
+  # Run produce_modularity_stats.R
+  source(paste0(Data_path, "produce_community_visuals.R"))
+}
