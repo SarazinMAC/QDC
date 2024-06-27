@@ -58,6 +58,7 @@ all_memberships_combined <- list()
 number_of_iterations <- 1000
 
 for (i in 1:number_of_iterations) {
+  seed <- set.seed(i)
   all_communities <- list()
   all_memberships <- list()
   all_community_stats <- list()
