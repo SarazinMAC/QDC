@@ -3,6 +3,21 @@
 ##########################################
 
 
+# Set node size in person net visuals - dynamic and static
+
+node_size <- function(slice, network_or_igraph = "network"){
+  if (network_or_igraph=="network") {
+    degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "node_edge_weights") 
+  } else if (network_or_igraph=="igraph") {
+    degree_value <- igraph::degree(slice, mode = "all", loops = TRUE) + vertex_attr(slice_to_plot, "node_edge_weights") 
+  }
+  return(
+    (10*(degree_value + 0.000001)/
+       (degree_value + 0.000001)*
+       (log(((degree_value+5)/100)+1)))
+  )
+}
+
 ##### ____Create Network Dynamic Object for Person network #####
 
 # Import static network creation scripts
@@ -355,20 +370,6 @@ year_label <- function(s){
   }
 }
 
-# Set node size in person net visuals - dynamic and static
-
-node_size <- function(slice, network_or_igraph = "network"){
-  if (network_or_igraph=="network") {
-    degree_value <- sna::degree(slice, cmode = "freeman") + (slice %v% "node_edge_weights") 
-  } else if (network_or_igraph=="igraph") {
-    degree_value <- igraph::degree(slice, mode = "all", loops = TRUE) + vertex_attr(slice_to_plot, "node_edge_weights") 
-  }
-  return(
-    (10*(degree_value + 0.000001)/
-       (degree_value + 0.000001)*
-       (log(((degree_value+5)/100)+1)))
-  )
-}
 
 filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_13_testing.html"
 

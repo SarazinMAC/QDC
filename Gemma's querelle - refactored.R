@@ -18,17 +18,18 @@ Data_path <- "D:\\Git_Repos\\QDC\\"
 slice_or_year <- "slice" # write "slice" or "year" here
 
 # Set start and end slice
-# Normally, the start slice is 17619 for the "slice" option and 1761 for the "year" option
-# While the end slice is 17899 for the "slice" option and 1789 for the "year" option
+# Normally, the start slice for producing the dynamic visuals is 17619 for the "slice" option and 1761 for the "year" option
+# Conversely, the start slice for producing community statistics is 17620 for the "slice" option and 1762 for the "year" option
+# The end slice is normally 17899 for the "slice" option and 1789 for the "year" option
 
-start_slice <- 17619
+start_slice <- 17620
 end_slice <- 17899
 slice_interval <- 1 # this value ordinarily does not change.
 
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "text" # write "text" or "pers" here
+text_or_pers <- "pers" # write "text" or "pers" here
 
 # Do you want to produce dynamic visualisations from this network?
 
@@ -46,13 +47,15 @@ histogram_measure <- "outdegree" # the centrality measure to use for the histogr
 # Community statistics and visualisations for slices 1763.4 and 1763.5
 
 # What community detection algorithm would you like to use to produce the statistics/visuals?
-cd_algorithm <- "Leiden" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
+cd_algorithm <- "Louvain" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
 
 # Do you want to produce modularity statistics of communities (both a line graph and excel file)?
 
-produce_modularity_stats <- TRUE # will produce modularity statistics if value is TRUE, otherwise not
+produce_modularity_stats <- FALSE # will produce modularity statistics if value is TRUE, otherwise not
 
+# Do you want to produce visualisations of QDC communities for slices 1763.4 and 1763.5?
 
+produce_community_visuals <- TRUE # will produce community visuals if value is TRUE, otherwise not
 
 
 ##### Processing #####
@@ -106,6 +109,9 @@ if (produce_modularity_stats == TRUE) {
   source(paste0(Data_path, "produce_communities.R"))
 }
 
+if (produce_community_visuals == TRUE) {
+  source(paste0(Data_path, "produce_communities.R"))
+}
 
 
 

@@ -2,12 +2,14 @@
 ##### Produce Community Visuals #####
 #####################################
 
+# load the colour palette for use in visuals
 
+load(paste0(Data_path, "colour_palette.RData"))
 
 # Export visuals from every result of the community detection algorithm
 
-slice_to_extract <- "17635"
-
+for (slice_to_extract in c("17634", "17635")) {
+  
 slice_memberships_combined <- lapply(all_memberships_combined, function(second_order_list) { second_order_list[[slice_to_extract]]})
 # Record the number of times that particular membership results have occurred, and export the visual 
 
@@ -35,7 +37,7 @@ for (membership in membership_by_count) {
   # set consistent colours for communities, based on presence of key actors ("community_leaders")
   # NOTE: This works in for slices 17634 qnd 17635, when Rivard community merges into Parlement de Paris - unsure if it works in other situations
   #  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvï¿½tius", "Pellicier", "Pluche", "Louis XV", "Daragon")
-  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvï¿½tius", "D'Alembert", "Daragon")
+  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvétius", "D'Alembert", "Daragon")
   #  community_leader_colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders)]
   community_leader_colours_comm <- pal(10, alpha = 0.5)[seq_along(community_leaders)]
   #  community_leader_colours_comm <- c25_comm[seq_along(community_leaders)]
@@ -95,15 +97,17 @@ for (membership in membership_by_count) {
        mark.col = colours_comm,
        mark.border = colours_borders
   )
-  title(plot_title, cex.main = 3)
+#  title(plot_title, cex.main = 3)
   vis <- recordPlot()
   
   
   #  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours.png"), width = 2400, height = 1800, type = "png", bg = "white")
   #  tiff(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test.tiff"),
   #       width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
-  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours_node_size.jpeg"),
+  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops.jpeg"),
        width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
   print(vis)
   dev.off()
 }
+}
+
