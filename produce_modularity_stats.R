@@ -51,7 +51,7 @@ vis <- ggplot(data = all_community_stats_combined_df[c(-1, -2),],
 # Export vis
 
 #Cairo(file = paste0(export_path, "Network_modularity_", text_or_pers, "_network_no_loops.png"), width = 2400, height = 1800, type = "png", bg = "white")
-jpeg(filename = paste0(export_path, "Network_modularity_", text_or_pers, "_network_", cd_algorithm, "_no_loops_no_labels.png"),
+jpeg(filename = paste0(export_path, "Network_modularity_", text_or_pers, "_network_", cd_algorithm, "_no_loops.png"),
      width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
 print(vis)
 dev.off()
