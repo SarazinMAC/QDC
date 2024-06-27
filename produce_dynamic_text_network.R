@@ -166,7 +166,7 @@ render.d3movie(QDC_text_anim2,
                xlab = year_label,
                vertex.cex = node_size,
                usearrows=TRUE,
-               d3.options = list(animationDuration=800, debugFrameInfo=TRUE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
+               d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
                output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
                verbose=TRUE)
 
