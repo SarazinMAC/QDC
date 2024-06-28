@@ -352,12 +352,14 @@ QDC_pers_anim <- compute.animation(QDC_pers_dyn, slice.par=list(start=start_slic
 
 QDC_pers_anim2 <- QDC_pers_dyn
 
-for (i in seq(from = start_slice,to = end_slice+1, by=1)) {
-  activate.vertex.attribute(QDC_pers_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.x", at = i))/3.2)
+for (i in seq(from = start_slice,to = end_slice+1, by=slice_interval)) {
+  dividing_number <- (((end_slice+1)-i)/((end_slice+1)-start_slice))+3.2
+  activate.vertex.attribute(QDC_pers_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.x", at = i))/dividing_number)
 }
 
-for (i in seq(from = start_slice,to = end_slice+1, by=1)) {
-  activate.vertex.attribute(QDC_pers_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.y", at = i))/3.2)
+for (i in seq(from = start_slice,to = end_slice+1, by=slice_interval)) {
+  dividing_number <- (((end_slice+1)-i)/((end_slice+1)-start_slice))+3.2
+  activate.vertex.attribute(QDC_pers_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_pers_anim, "animation.y", at = i))/dividing_number)
 }
 
 year_label <- function(s){

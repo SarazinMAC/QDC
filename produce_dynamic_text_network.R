@@ -134,11 +134,13 @@ QDC_text_anim <- compute.animation(QDC_text_dyn, slice.par=list(start=start_slic
 QDC_text_anim2 <- QDC_text_dyn
 
 for (i in seq(from = start_slice,to = end_slice, by=1)) {
-  activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/3.5)
+  dividing_number <- (((end_slice+1)-i)/((end_slice+1)-start_slice))+3.5
+  activate.vertex.attribute(QDC_text_anim2, "animation.x", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.x", at = i))/dividing_number)
 }
 
 for (i in seq(from = start_slice,to = end_slice, by=1)) {
-  activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/3.5)
+  dividing_number <- (((end_slice+1)-i)/((end_slice+1)-start_slice))+3.5
+  activate.vertex.attribute(QDC_text_anim2, "animation.y", at = i, value = (get.vertex.attribute.active(QDC_text_anim, "animation.y", at = i))/dividing_number)
 }
 
 ## Recreating the network with new process (as of 2024-02-17)
