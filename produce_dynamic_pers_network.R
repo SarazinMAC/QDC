@@ -391,10 +391,9 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                launchBrowser=TRUE, filename=paste0(output_filename, ".html"),
                verbose=TRUE)
 
-
-}
-
-
 # run the script to modify the HTML files
 
 source(paste0(Data_path, "modify_html_dynamic_visuals.R"))
+
+
+}

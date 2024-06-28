@@ -184,9 +184,9 @@ render.d3movie(QDC_text_anim2,
                output.mode = 'HTML', launchBrowser=TRUE, filename=paste0(output_filename, ".html"),
                verbose=TRUE)
 
-}
-
-
 # run the script to modify the HTML files
 
 source(paste0(Data_path, "modify_html_dynamic_visuals.R"))
+
+
+}
