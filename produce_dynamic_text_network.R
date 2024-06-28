@@ -85,13 +85,25 @@ QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis,
                                                      actor_colname = "Actor_text",
                                                      Text_or_pers_name = "Text_Name")
 
+##### replace special characters with HTML codes so they render in visualisations
+
+chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
+
+## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
+for (char in chars[,1]) {
+  QDC_vs_dynamic_vis_attr$Actor_text <- gsub(char, chars[which(chars$Character==char),"R_HTML"], QDC_vs_dynamic_vis_attr$Actor_text)
+}; rm(char)
+
 # loop over vertex data to add the dynamic attributes on the vertices
 for(row in 1:nrow(QDC_vs_dynamic_vis_attr)){
   activate.vertex.attribute(x = QDC_text_dyn, prefix = 'vertex_colour',
                             value = QDC_vs_dynamic_vis_attr$vertex_colour[row],
                             onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
                             v=QDC_vs_dynamic_vis_attr$Actor_code[row])
-  
+  activate.vertex.attribute(x = QDC_text_dyn, prefix = 'Actor_text_name',
+                            value = QDC_vs_dynamic_vis_attr$Actor_text[row],
+                            onset=QDC_vs_dynamic_vis_attr$onset[row],terminus=QDC_vs_dynamic_vis_attr$terminus[row],
+                            v=QDC_vs_dynamic_vis_attr$Actor_code[row])
 }
 
 
