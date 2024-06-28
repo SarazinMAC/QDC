@@ -29,7 +29,7 @@ slice_interval <- 1 # this value ordinarily does not change.
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "pers" # write "text" for text network or "pers" for person network here
+text_or_pers <- "text" # write "text" for text network or "pers" for person network here
 
 # Do you want to produce dynamic visualisations from this network?
 
@@ -46,9 +46,10 @@ produce_centrality_histogram <- FALSE # will produce histogram if value is TRUE,
 histogram_measure <- "outdegree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
 
 # Community statistics and visualisations for slices 1763.4 and 1763.5
+# Note: will only work with the person network
 
 # What community detection algorithm would you like to use to produce the statistics/visuals?
-cd_algorithm <- "Louvain" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
+cd_algorithm <- "Leiden" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
 
 # Do you want to produce modularity statistics of communities (both a line graph and excel file)?
 
@@ -56,7 +57,7 @@ produce_modularity_stats <- FALSE # will produce modularity statistics if value 
 
 # Do you want to produce visualisations of QDC communities for slices 1763.4 and 1763.5?
 
-produce_community_visuals <- TRUE # will produce community visuals if value is TRUE, otherwise not
+produce_community_visuals <- FALSE # will produce community visuals if value is TRUE, otherwise not
 
 
 ##### Processing #####

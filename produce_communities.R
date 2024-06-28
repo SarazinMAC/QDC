@@ -44,6 +44,7 @@ for(row in 1:nrow(n_multiple_ties_df)){
 
 slices <- seq(from = start_slice, to = end_slice, by = slice_interval)
 
+#TODO: Make configurable so that this file runs faster with visuals
 #slices <- c(17634, 17635)
 
 all_community_sizes <- list()
