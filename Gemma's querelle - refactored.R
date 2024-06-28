@@ -22,18 +22,19 @@ slice_or_year <- "slice" # write "slice" or "year" here
 # Conversely, the start slice for producing community statistics is 17620 for the "slice" option and 1762 for the "year" option
 # The end slice is normally 17899 for the "slice" option and 1789 for the "year" option
 
-start_slice <- 17620
+start_slice <- 17619
 end_slice <- 17899
 slice_interval <- 1 # this value ordinarily does not change.
 
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "pers" # write "text" or "pers" here
+text_or_pers <- "pers" # write "text" for text network or "pers" for person network here
 
 # Do you want to produce dynamic visualisations from this network?
 
-produce_dynamic_visuals <- FALSE # will produce dynamic visuals if value is TRUE, otherwise not
+produce_dynamic_visual <- TRUE # will produce dynamic visuals if value is TRUE, otherwise not
+dynamic_visual_filename <- "QDC_person_network_dynamic_visual.html"
 
 # Do you want to produce slice-by-slice or year-by-year statistics from this network?
 
@@ -86,7 +87,7 @@ QDC_62_89 <- QDC[which(QDC$Date>1761),]
 
 ##### Run files #####
 
-if (produce_dynamic_visuals==TRUE) {
+if (produce_dynamic_visual==TRUE) {
   
   if(text_or_pers=="pers") {
 

@@ -338,7 +338,7 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
   
 }
 
-if (produce_dynamic_visuals == TRUE) {
+if (produce_dynamic_visual == TRUE) {
   
 ### Make animation
 
@@ -373,7 +373,6 @@ year_label <- function(s){
 }
 
 
-filename <- "QDC_pers_with_pre_QDC_ties_corrected_2024_06_13_testing.html"
 
 ## Creating ndtv visual without base network specified
 
@@ -389,7 +388,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               launchBrowser=TRUE, filename=filename,
+               launchBrowser=TRUE, filename=dynamic_visual_filename,
                verbose=TRUE)
 
 

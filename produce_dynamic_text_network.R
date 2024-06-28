@@ -117,7 +117,7 @@ for (char in chars[,1]) {
   QDC_text_dyn %v% "Actor_text" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
 }; rm(char)
 
-if (produce_dynamic_visuals == TRUE) {
+if (produce_dynamic_visual == TRUE) {
 
 ##### Create dynamic visual #####
 
@@ -153,8 +153,6 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
 }
 
-filename <- "QDC_text_with_pre_QdC_colours_refactored_2024_06_05.html"
-
 render.d3movie(QDC_text_anim2,
                #render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
@@ -169,7 +167,7 @@ render.d3movie(QDC_text_anim2,
                vertex.cex = node_size,
                usearrows=TRUE,
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               output.mode = 'HTML', launchBrowser=TRUE, filename=filename,
+               output.mode = 'HTML', launchBrowser=TRUE, filename=dynamic_visual_filename,
                verbose=TRUE)
 
 }
