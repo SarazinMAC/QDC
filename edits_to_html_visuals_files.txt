@@ -1,0 +1,133 @@
+Modifications to HTML file
+
+
+Replace all 
+è 
+with 
+\u00e8
+
+Replace
+.d3-slider-axis text {
+    font-size: 11px;
+}
+With
+.d3-slider-axis text {
+    font-size: 0px;
+}
+
+
+Replace
+.main, .xlab {
+  text-anchor: middle;
+}
+with
+.main {
+  text-anchor: middle;
+  font-size: 2.4em;
+}
+
+.xlab {
+  text-anchor: middle;
+  font-size: 2.8em;
+  font-weight: bold
+}
+
+Replace
+.label, .main, .xlab, .tooltip {
+  font-family: sans-serif;
+}
+With
+.label, .main, .xlab {
+  font-family: garamond;
+}
+
+.tooltip {
+  font-family: calibri;
+}
+
+To change the animation duration control so that it makes more sense (instead of an unhelpful scale from 0 to 8 it’s a helpful one from 0 to 2)
+Replace
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
+With
+      var durationSlider = d3.slider().min(0).max(2).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
+AND
+interval=1;
+with
+interval=0.1;	
+
+To make the animation duration control make more sense, with removed numbers and a changed text to make it more understandable
+Replace
+durationControl.append('span').attr('class', 'menu-label').html('Animation Duration');
+With
+durationControl.append('span').attr('class', 'menu-label').html('Slow down animation &#8594');
+
+AND
+var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000)
+with
+var durationSlider = d3.slider().min(0.5).max(5).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/800)
+
+AND
+n3.options.animationDuration = value*1000
+with
+n3.options.animationDuration = value*800
+AND
+interval=1;
+with
+interval=0.5;	
+
+
+
+
+Replace
+.ticks(Math.round(sliderLength / 100))
+
+With
+.ticks(Math.round(sliderLength / 50))
+
+
+
+Consider doing these two together: 
+- replacing the following if you want to give more vertical space for visualisation in the browser (though note that this messes with the title and X-axis label too):
+var div_height = n3.domTarget.node().offsetHeight - $(n3.domTarget.select('.controls').node()).outerHeight(true);
+with
+var div_height = n3.domTarget.node().offsetHeight
+(or a similar change)
+
+- replacing the following to increase the margin for the x-axis label
+    n3.domTarget.select('.xlab').attr('transform', "translate("+center+","+(div_height-margin.y)+")")
+with
+    n3.domTarget.select('.xlab').attr('transform', "translate("+center+","+(div_height-margin.y*7)+")")
+(or another multiplier)
+NOTES
+
+On line 746, there is a default option dataChooser: false – this seems to be a method of showing different graphs (and choosing which graph to show). Combined with line just below, it could produce something interesting: dataChooserDir: 'data/',      //web path to dir containing data json files
+
+Around line 1140, there are three arguments – n3.minTime, n3.maxTime, n3.interval, which control the values that appear at the bottom of the slider.
+
+n3.slider.value(n3.minTime) (approx. line 1160) controls where the slider starts – in this case, it starts at the minimum time on the slider
+
+Around line 460,  the following controls the number of divisions you have in the slides axis (sliderLength / 10 produces more ticks than sliderLength / 1000)
+         axis = d3.svg.axis()
+              .ticks(Math.round(sliderLength / 100))
+              .tickFormat(tickFormat)
+              .orient((orientation === "horizontal") ? "bottom" :  "right");
+
+Around line 1050, the following controls the number of ticks in the “animation duration” slider.
+      var durationSlider = d3.slider().min(0).max(8).axis(new d3.svg.axis().ticks(5)).value(n3.options.animationDuration/1000);
+
+Around line 1170, the following I think sets the time at which the animation starts upon loading (in this case, at the minimum time):
+n3.slider.value(n3.minTime)
+
+Around line 413, The following changes the size of the slider handle, both on the bottom of the vis and for the animation duration slider
+  handle1.style('width', ((scale(interval+min)*sliderLength)/2)+'px')
+
+The following line, around line 970, controls how big the central network animation appears at first (if you don’t adjust it using your mouse scroller). It is automatically adjusted to fit the screen size:
+    //reset height including main & xlab for graph container translation
+    height = height - mainMargin - xlabMargin;
+
+
+The following, around line 1612, tells the animation to display the main and xlab texts that are specified in the data:
+
+
+    $.each(['main', 'xlab'], function(i, type){
+      var text = renderData.graph[type];
