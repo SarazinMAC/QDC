@@ -22,7 +22,7 @@ slice_or_year <- "slice" # write "slice" or "year" here
 # Conversely, the start slice for producing community statistics is 17620 for the "slice" option and 1762 for the "year" option
 # The end slice is normally 17899 for the "slice" option and 1789 for the "year" option
 
-start_slice <- 17619
+start_slice <- 17620
 end_slice <- 17899
 slice_interval <- 1 # this value ordinarily does not change.
 
@@ -33,17 +33,17 @@ text_or_pers <- "text" # write "text" for text network or "pers" for person netw
 
 # Do you want to produce dynamic visualisations from this network?
 
-produce_dynamic_visual <- TRUE # will produce dynamic visuals if value is TRUE, otherwise not
-dynamic_visual_filename <- "QDC_person_network_dynamic_visual.html"
+produce_dynamic_visual <- FALSE # will produce dynamic visuals if value is TRUE, otherwise not
+dynamic_visual_filename <- "QDC_text_network_dynamic_visual_3"
 
 # Do you want to produce slice-by-slice or year-by-year statistics from this network?
 
-produce_statistics_by_slice_or_year <- FALSE # will produce statistics if value is TRUE, otherwise not
+produce_statistics_by_slice_or_year <- TRUE # will produce statistics if value is TRUE, otherwise not
 
 # Do you want to produce a histogram of centrality distributions from this network?
 
 produce_centrality_histogram <- FALSE # will produce histogram if value is TRUE, otherwise not
-histogram_measure <- "outdegree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
+histogram_measure <- "degree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
 
 # Community statistics and visualisations for slices 1763.4 and 1763.5
 # Note: will only work with the person network
@@ -102,10 +102,13 @@ if (produce_dynamic_visual==TRUE) {
   }
 }
 
-if (produce_centrality_histogram == TRUE) {
+if (produce_statistics_by_slice_or_year == TRUE) {
   source(paste0(Data_path, "QDC_stats_by_slice.R"))
 }
 
+if (produce_centrality_histogram == TRUE) {
+  source(paste0(Data_path, "QDC_stats_by_slice.R"))
+}
 
 if (produce_modularity_stats == TRUE) {
   source(paste0(Data_path, "produce_communities.R"))
