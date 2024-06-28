@@ -372,7 +372,7 @@ year_label <- function(s){
   }
 }
 
-
+output_filename <- paste0(Data_path, "dynamic_network_visuals\\", dynamic_visual_filename)
 
 ## Creating ndtv visual without base network specified
 
@@ -388,10 +388,13 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
                                edge.tooltip = function(slice){slice %e% 'Tie_name_dyn'},
                                edge.col = "edge_colour", usearrows=TRUE),
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               launchBrowser=TRUE, filename=dynamic_visual_filename,
+               launchBrowser=TRUE, filename=paste0(output_filename, ".html"),
                verbose=TRUE)
 
 
 }
 
 
+# run the script to modify the HTML files
+
+source(paste0(Data_path, "modify_html_dynamic_visuals.R"))

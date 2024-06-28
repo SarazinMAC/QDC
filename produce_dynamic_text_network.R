@@ -114,7 +114,7 @@ chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
 for (char in chars[,1]) {
   QDC_text_dyn %v% "vertex.names" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "vertex.names") 
   QDC_text_dyn %v% "Text_Name" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
-  QDC_text_dyn %v% "Actor_text" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Text_Name") 
+  QDC_text_dyn %v% "Actor_text" <- gsub(char, chars[which(chars$Character==char),3], QDC_text_dyn %v% "Actor_text") 
 }; rm(char)
 
 if (produce_dynamic_visual == TRUE) {
@@ -153,6 +153,8 @@ node_size <- function(slice){(10*(sna::degree(slice, cmode = "freeman") + 0.0000
                                   sna::degree(slice, cmode = "freeman")+5)/100)+1)))
 }
 
+output_filename <- paste0(Data_path, "dynamic_network_visuals\\", dynamic_visual_filename)
+
 render.d3movie(QDC_text_anim2,
                #render.d3movie(QDC_text_anim,
                render.par=list(tween.frames=50, show.time = TRUE),
@@ -167,7 +169,12 @@ render.d3movie(QDC_text_anim2,
                vertex.cex = node_size,
                usearrows=TRUE,
                d3.options = list(animationDuration=800, debugFrameInfo=FALSE, durationControl=TRUE, margin=list(x=0,y=10), enterExitAnimationFactor=0.1),
-               output.mode = 'HTML', launchBrowser=TRUE, filename=dynamic_visual_filename,
+               output.mode = 'HTML', launchBrowser=TRUE, filename=paste0(output_filename, ".html"),
                verbose=TRUE)
 
 }
+
+
+# run the script to modify the HTML files
+
+source(paste0(Data_path, "modify_html_dynamic_visuals.R"))
