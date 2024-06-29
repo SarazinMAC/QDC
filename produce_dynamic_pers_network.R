@@ -172,6 +172,15 @@ edge_weights_df <- edge_weights_df[order(edge_weights_df$num),]
 QDC_es$edge_weights <- edge_weights_df$edge_weights
 QDC_pre_62_edges$edge_weights <- 1
 
+## Assign edge weights of loops to 0 so they don't appear in the visuals
+
+QDC_es$edge_weights_except_loops <- QDC_es$edge_weights
+QDC_es$edge_weights_except_loops[QDC_es$Actor_code==QDC_es$Tie_code] <- 0
+
+QDC_pre_62_edges$edge_weights_except_loops <- QDC_pre_62_edges$edge_weights
+QDC_pre_62_edges$edge_weights_except_loops[QDC_pre_62_edges$Actor_code==QDC_pre_62_edges$Tie_code] <- 0
+
+
 
 ## Create vertex and edge spells for visual
 
@@ -333,7 +342,7 @@ for(row in 1:nrow(QDC_es_dynamic_vis)){
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
   activate.edge.attribute(QDC_pers_dyn,'Tie_name_dyn',QDC_es_dynamic_vis$Tie_name_dyn[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
-  activate.edge.attribute(QDC_pers_dyn,'edge_weights',QDC_es_dynamic_vis$edge_weights[row],
+  activate.edge.attribute(QDC_pers_dyn,'edge_weights',QDC_es_dynamic_vis$edge_weights_except_loops[row],
                           onset=QDC_es_dynamic_vis$onset[row],terminus=QDC_es_dynamic_vis$terminus[row],e=edge_id)
   
 }
