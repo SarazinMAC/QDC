@@ -6,7 +6,7 @@ automate_html_modifications <- function(input_file_path, output_file_path) {
   html_content <- paste(html_content, collapse = "\n")
   
   # Perform replacements
-  html_content <- gsub("è", "\\\\u00e8", html_content, fixed = TRUE)
+  html_content <- gsub("Ã¨", "\\\\u00e8", html_content, fixed = TRUE)
   
   # CSS replacements
   html_content <- gsub(".d3-slider-axis text {\\s+font-size: 11px;\\s+}", 
@@ -56,7 +56,7 @@ automate_html_modifications <- function(input_file_path, output_file_path) {
   writeLines(html_content, output_file_path)
 }
 
-# Example usage
+# Run the script, writing over original file
 input_file_path <- paste0(output_filename, ".html")
-output_file_path <- paste0(output_filename, "_mod.html")
+output_file_path <- paste0(output_filename, ".html")
 automate_html_modifications(input_file_path, output_file_path)
