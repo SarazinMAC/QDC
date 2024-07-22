@@ -39,7 +39,7 @@ Other article analyses, listed below according to article section, can be run by
 
 ### 4 Results: Centrality
 
-- Figures 1a, 1b, 2a, 2b: can be produced by setting "produce_centrality_histogram" to TRUE. Figures are produced by the "produce_histograms.R" file.
+- Figures 7, 8: can be produced by setting "produce_centrality_histogram" to TRUE, and setting "histogram_measure" to "degree". Figures are produced by the "produce_histograms.R" file.
 - Statistics on ties sent/received by various actors (lines 323-325, 370-371): produced by setting "produce_statistics_by_slice_or_year" to TRUE. This runs the "QDC_stats_by_slice.R" file, which produces .xlsx files containing various network statistics by slice or year of the QdC, either for the person or text network. The files are produced in the "stats" directory of the repository. The statistics themselves can then be retrieved from the .xlsx files, in the files' "degree" and "degree_neg" sheets, which show degree values per year or slice of the *Querelle* (to find the final degree values over the entire querelle, go to the rightmost columns in those sheets).
 - Statistics on texts published in 1762 and 1763 and their references (lines 371-373): produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
 - Statistics on texts referring to Rousseau (1762) and La Chalotais (1763) (lines XXX): produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.

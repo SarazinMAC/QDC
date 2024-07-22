@@ -29,21 +29,21 @@ slice_interval <- 1 # this value ordinarily does not change.
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "text" # write "text" for text network or "pers" for person network here
+text_or_pers <- "pers" # write "text" for text network or "pers" for person network here
 
-# Do you want to produce dynamic visualisations from this network?
+# Do you want to produce dynamic visualisationsrom this network?
 
 produce_dynamic_visual <- FALSE # will produce dynamic visuals if value is TRUE, otherwise not
-dynamic_visual_filename <- "QDC_text_network_dynamic_visual_3"
+dynamic_visual_filename <- "QDC_person_network_dynamic_visual_3"
 
 # Do you want to produce slice-by-slice or year-by-year statistics from this network?
 
-produce_statistics_by_slice_or_year <- TRUE # will produce statistics if value is TRUE, otherwise not
+produce_statistics_by_slice_or_year <- FALSE # will produce statistics if value is TRUE, otherwise not
 
 # Do you want to produce a histogram of centrality distributions from this network?
 
-produce_centrality_histogram <- FALSE # will produce histogram if value is TRUE, otherwise not
-histogram_measure <- "degree" # the centrality measure to use for the histogram. Valid values are "degree", "outdegree", and "indegree"
+produce_centrality_histogram <- TRUE # will produce histogram if value is TRUE, otherwise not
+histogram_measure <- "degree" # the centrality measure to use for the histogram. Valid values are "degree" and "outdegree"
 
 # Community statistics and visualisations for slices 1763.4 and 1763.5
 # Note: will only work with the person network
