@@ -48,7 +48,7 @@ histogram_measure <- "degree" # the centrality measure to use for the histogram.
 # Community statistics and visualisations for slices 1763.4 and 1763.5
 # Note: will only work with the person network
 
-# What community detection algorithm would you like to use to produce the statistics/visuals?
+# Which community detection algorithm would you like to use to produce the statistics/visuals?
 cd_algorithm <- "Leiden" # Valid values are "Louvain" and "Leiden" (note they are case-sensitive)
 
 # Do you want to produce modularity statistics of communities (both a line graph and excel file)?
@@ -58,7 +58,6 @@ produce_modularity_stats <- FALSE # will produce modularity statistics if value 
 # Do you want to produce visualisations of QDC communities for slices 1763.4 and 1763.5?
 
 produce_community_visuals <- FALSE # will produce community visuals if value is TRUE, otherwise not
-
 
 ##### Processing #####
 
@@ -117,9 +116,6 @@ if (produce_modularity_stats == TRUE) {
 if (produce_community_visuals == TRUE) {
   source(paste0(Data_path, "produce_communities.R"))
 }
-
-
-
 
 
 

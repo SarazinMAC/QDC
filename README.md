@@ -42,14 +42,14 @@ Other article analyses, listed below according to article section, can be run by
 - Figures 7, 8: can be produced by setting "produce_centrality_histogram" to TRUE, and setting "histogram_measure" to "degree". Figures are produced by the "produce_histograms.R" file.
 - Statistics on ties sent/received by various actors (lines 323-325, 370-371): produced by setting "produce_statistics_by_slice_or_year" to TRUE. This runs the "QDC_stats_by_slice.R" file, which produces .xlsx files containing various network statistics by slice or year of the QdC, either for the person or text network. The files are produced in the "stats" directory of the repository. The statistics themselves can then be retrieved from the .xlsx files, in the files' "degree" and "degree_neg" sheets, which show degree values per year or slice of the *Querelle* (to find the final degree values over the entire querelle, go to the rightmost columns in those sheets).
 - Statistics on texts published in 1762 and 1763 and their references (lines 371-373): produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
-- Statistics on texts referring to Rousseau (1762) and La Chalotais (1763) (lines XXX): produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
+- Statistics on texts referring to Rousseau (1762) and La Chalotais (1763) (lines 409-416): produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
 - Statistics on texts receiving no references: obtained from the .xlsx files produced by setting "produce_statistics_by_slice_or_year" to TRUE. See the "indegree" sheet within the outputted files.
 
 ### 4 Results: Community
 
-- Modularity statistics (Figure X, Figure Y) and charts resulting from running the Louvain and Leiden algorithms: Produced by running the "produce_modularity_stats.R" file. The file produces Louvain or Leiden statistics based on the configurable "cd_algorithm" value set at the top of the file.
-- Network visualisations resulting from the community detection algorithms:  Produced by running the "produce_community_visuals.R" file. The file produces Louvain or Leiden statistics based on the configurable "cd_algorithm" value set at the top of the file.
-- Co-references between La Chalotais, Rousseau, D'Alembert, and De l'Education Publique: produced by running the "co_reference_analysis.R" file.
+- Network visualisations resulting from the Louvain and Leiden community detection algorithms (Figures 9-12, Appendices F.1-F.3):  Produced by setting "produce_community_visuals" to TRUE. Uses the Louvain or Leiden algorithms depending on the configurable "cd_algorithm" value set within main.R.
+- Modularity statistics (Appendices C-D) and charts (Figure 13, Appendix E) resulting from running the Louvain and Leiden algorithms: Produced by setting "produce_modularity_stats" to TRUE. Uses the Louvain or Leiden algorithms depending on the configurable "cd_algorithm" value set within main.R.
+- Co-references between La Chalotais, Rousseau, D'Alembert, and De l'Education Publique: produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
 
 ### 4 Results: Preferential Attachment
 
