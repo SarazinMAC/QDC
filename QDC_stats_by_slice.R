@@ -228,6 +228,6 @@ for (stat in stats_to_export[stats_to_export!="net_stats"]) {
   stats_list_transposed[[stat]] <- stats_transposed
 }
 
-export(stats_list_transposed, file = paste0(export_path,"stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
+export(stats_list_transposed, file = paste0(export_path,"stats\\stats_by_", slice_or_year, "_", date, "_", text_or_pers,"_net_transposed.xlsx"))
 
 }

@@ -104,7 +104,7 @@ for (membership in membership_by_count) {
   #  Cairo(file = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test_colours.png"), width = 2400, height = 1800, type = "png", bg = "white")
   #  tiff(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops_test.tiff"),
   #       width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
-  jpeg(filename = paste0(export_path, "Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops.jpeg"),
+  jpeg(filename = paste0(export_path, "community_network_visuals\\Communities_", slice_to_extract, "_likelihood_", membership_prob, "_", cd_algorithm, "_no_loops.jpeg"),
        width = 4800, height = 3600, type = "cairo", bg = "white", family = "Calibri", symbolfamily = "Calibri", res = 200)
   print(vis)
   dev.off()
