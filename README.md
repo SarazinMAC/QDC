@@ -27,7 +27,7 @@ All other files and directories relate to the analyses carried out for Authors (
 
 All network analyses and visualisations for the article were produced using R version 4.1.3. A table of packages and package versions used for the analyses can be found below.
 
-The "main.R" file, contained within the repo's root directory, can be used to reproduce the article analyses, as well as the dynamic visualisations. Each analysis or visualisation can be produced by setting the correct configurable values in lines 1-32 of the file, setting the relevant object value to TRUE, and running the entire file. Guidance on how to set each configurable value is included within the "main.R" file.
+The "main.R" file, contained within the repo's root directory, can be used to reproduce the article analyses, as well as the dynamic visualisations. Each analysis or visualisation can be produced by setting the correct configurable values in lines 1-32 of the file, setting the relevant object value to TRUE, and running the entire file. Outputs are exported to the repo's directories as specified above. Guidance on how to set each configurable value is included within the "main.R" file.
 
 For example, to produce the dynamic visualisations, the produce_dynamic_visual object should be set to TRUE (i.e. the beginning of line XX should be "produce_dynamic_visual <- TRUE"). the text_or_pers object in line XX should be set to "text" to produce the dynamic text network visual and to "pers" to produce the dynamic person network visual. The code for producing the dynamic text and person visuals can respectively be found in the "produce_dynamic_text_network.R" and "produce_dynamic_pers_network.R" files.
 
