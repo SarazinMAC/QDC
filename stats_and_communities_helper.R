@@ -5,8 +5,6 @@
 library(igraph)
 library(tsna)
 library(tergm)
-library(intergraph)
-library(dplyr)
 library(Cairo)
 library(data.table)
 library(ggplot2)
