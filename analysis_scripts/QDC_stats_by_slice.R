@@ -2,7 +2,7 @@
 ##### QDC - Descriptive Statistics #####
 ########################################
 
-source(paste0(Data_path, "stats_and_communities_helper.R"))
+source(paste0(Data_path, "analysis_scripts\\stats_and_communities_helper.R"))
 
 ### tSnaStats doesn't work with changing vertex activity - so recreate network with all nodes present in 17620
 
@@ -109,7 +109,7 @@ indegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, 
 outdegree <- tSnaStats(QDC_dyn_onset_62, snafun = "degree", start = start_slice, end = end_slice, time.interval = slice_interval, cmode="outdegree", diag=TRUE)
 
 if (produce_centrality_histogram == TRUE) {
-  source(paste0(Data_path, "produce_centrality_histogram.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_centrality_histogram.R"))
 } 
 
 if (produce_statistics_by_slice_or_year == TRUE) {

@@ -67,7 +67,7 @@ QDC_file <- import(paste0(Data_path, "original_qdc_datasets\\", Data_name))
 
 # Import custom functions
 
-source(paste0(Data_path, "Custom_functions_dyn_data_visuals.R"))
+source(paste0(Data_path, "analysis_scripts\\Custom_functions_dyn_data_visuals.R"))
 
 
 # Clean dataset of empty rows
@@ -92,29 +92,29 @@ if (produce_dynamic_visual==TRUE) {
   if(text_or_pers=="pers") {
 
     # Produce the dynamic person network
-    source(paste0(Data_path, "produce_dynamic_pers_network.R"))
+    source(paste0(Data_path, "analysis_scripts\\produce_dynamic_pers_network.R"))
     
   } else if (text_or_pers=="text") {
     
     # Produce the dynamic text network
-    source(paste0(Data_path, "produce_dynamic_text_network.R"))
+    source(paste0(Data_path, "analysis_scripts\\produce_dynamic_text_network.R"))
   }
 }
 
 if (produce_statistics_by_slice_or_year == TRUE) {
-  source(paste0(Data_path, "QDC_stats_by_slice.R"))
+  source(paste0(Data_path, "analysis_scripts\\QDC_stats_by_slice.R"))
 }
 
 if (produce_centrality_histogram == TRUE) {
-  source(paste0(Data_path, "QDC_stats_by_slice.R"))
+  source(paste0(Data_path, "analysis_scripts\\QDC_stats_by_slice.R"))
 }
 
 if (produce_modularity_stats == TRUE) {
-  source(paste0(Data_path, "produce_communities.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_communities.R"))
 }
 
 if (produce_community_visuals == TRUE) {
-  source(paste0(Data_path, "produce_communities.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_communities.R"))
 }
 
 

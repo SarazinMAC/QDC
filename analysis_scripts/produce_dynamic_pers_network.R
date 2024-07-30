@@ -22,8 +22,8 @@ node_size <- function(slice, network_or_igraph = "network"){
 
 # Import static network creation scripts
 
-source(paste0(Data_path, "create_static_text_net.R"))
-source(paste0(Data_path, "create_static_pers_net.R"))
+source(paste0(Data_path, "analysis_scripts\\create_static_text_net.R"))
+source(paste0(Data_path, "analysis_scripts\\create_static_pers_net.R"))
 
 # Create vertex spell
 
@@ -402,7 +402,7 @@ render.d3movie(QDC_pers_anim2, render.par=list(tween.frames=50, show.time = TRUE
 
 # run the script to modify the HTML files
 
-source(paste0(Data_path, "modify_html_dynamic_visuals.R"))
+source(paste0(Data_path, "analysis_scripts\\modify_html_dynamic_visuals.R"))
 
 
 }

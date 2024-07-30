@@ -4,7 +4,7 @@
 
 # Processing --------
 
-source(paste0(Data_path, "stats_and_communities_helper.R"))
+source(paste0(Data_path, "analysis_scripts\\stats_and_communities_helper.R"))
 
 dyn_net <- QDC_dyn
 
@@ -116,11 +116,11 @@ if (produce_modularity_stats == TRUE) {
   rio::export(all_community_stats_combined_df, paste0(export_path, "stats\\all_community_stats_", cd_algorithm,"_no_loops.xlsx"), rowNames = FALSE)
   
   # Run produce_modularity_stats.R
-  source(paste0(Data_path, "produce_modularity_stats.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_modularity_stats.R"))
 }
 
 if (produce_community_visuals == TRUE) {
   
   # Run produce_modularity_stats.R
-  source(paste0(Data_path, "produce_community_visuals.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_community_visuals.R"))
 }
