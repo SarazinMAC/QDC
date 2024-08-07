@@ -26,7 +26,28 @@ names(table_1_results) <- c("An explicit negative reference (-2)",
                                                           "A sequel or supplement (5)",
                                                           "A response to a catalyst (6)")
 
-# Produce results about texts published in 1762 and 1763 and their references
+# Produce results about texts published in 1762 and 1763 and their references 
+# Note: for text network only
 
-texts_62_63 <- QDC_es[which(QDC_es$slice>17619 & QDC_es$slice<17640),]
+if (text_or_pers == "text") {
+  # Temporary fix to assign correct onset to Gerdil (1763)
+  
+  texts_62_63 <- QDC_es
+  texts_62_63$onset[texts_62_63$`ACTOR-TEXT`=="Gerdil (1763)"] <- 17639
+  
+  texts_62_63 <- texts_62_63[which(texts_62_63$onset>17619 & texts_62_63$onset<17640),]
+  
+  
+  # create quality var with original values
+  
+  texts_62_63$Quality_original <- texts_62_63$Quality - 3
+  
+  # display references of texts according to their quality
+  
+  references_of_texts_62_63 <- table(texts_62_63$`TIE-TEXT`, texts_62_63$Quality_original)
+  percent_refs_to_rousseau <- sum(
+    references_of_texts_62_63["Rousseau (1762)",]/length(unique(texts_62_63$`ACTOR-TEXT`))
+    )
+  
+}
 
