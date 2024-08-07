@@ -87,7 +87,7 @@ QDC_vs_dynamic_vis_attr <- create_dyn_vertex_attr_df(vs_df = QDC_vs_dynamic_vis,
 
 ##### replace special characters with HTML codes so they render in visualisations
 
-chars <- import(paste0(Data_path, "HTML_codes_French_characters.xlsx"))
+chars <- import(paste0(Data_path, "analysis_scripts\\HTML_codes_French_characters.xlsx"))
 
 ## For loop: For every French character in the first column of the dataframe "chars", replace it with the HTML code in the third column of the dataframe
 for (char in chars[,1]) {
