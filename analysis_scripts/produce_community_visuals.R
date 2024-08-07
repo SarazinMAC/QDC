@@ -4,7 +4,7 @@
 
 # load the colour palette for use in visuals
 
-load(paste0(Data_path, "colour_palette.RData"))
+load(paste0(Data_path, "analysis_scripts\\colour_palette.RData"))
 
 # Export visuals from every result of the community detection algorithm
 
@@ -37,7 +37,7 @@ for (membership in membership_by_count) {
   # set consistent colours for communities, based on presence of key actors ("community_leaders")
   # NOTE: This works in for slices 17634 qnd 17635, when Rivard community merges into Parlement de Paris - unsure if it works in other situations
   #  community_leaders <- c("D'Alembert", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Helvï¿½tius", "Pellicier", "Pluche", "Louis XV", "Daragon")
-  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvétius", "D'Alembert", "Daragon")
+  community_leaders <- c("Louis XV", "La Chalotais", "Rivard", "Parlement de Paris", "Rousseau", "Pluche", "Pellicier", "Helvï¿½tius", "D'Alembert", "Daragon")
   #  community_leader_colours_comm <- rainbow(10, alpha = 0.3)[seq_along(community_leaders)]
   community_leader_colours_comm <- pal(10, alpha = 0.5)[seq_along(community_leaders)]
   #  community_leader_colours_comm <- c25_comm[seq_along(community_leaders)]
