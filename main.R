@@ -9,9 +9,9 @@ library(dplyr)
 
 # Configurable values
 
-#Data_path <- "C:\\Users\\sarazinm\\Documents\\Gen\\Gemma\\"
 Data_name <- "QDC_2024_06_07.xlsx"
-Data_path <- "D:\\Git_Repos\\QDC\\"
+#Data_path <- "D:\\Git_Repos\\QDC\\"
+Data_path <- "C:\\Users\\sarazinm\\Documents\\GitHub\\QDC\\"
 
 # Do you want to use slices (i.e. years * 10) or original years to create visualisations or statistics?
 
@@ -29,7 +29,7 @@ slice_interval <- 1 # this value ordinarily does not change.
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "pers" # write "text" for text network or "pers" for person network here
+text_or_pers <- "text" # write "text" for text network or "pers" for person network here
 
 # Do you want to produce dynamic visualisationsrom this network?
 
@@ -42,7 +42,7 @@ produce_statistics_by_slice_or_year <- FALSE # will produce statistics if value 
 
 # Do you want to produce a histogram of centrality distributions from this network?
 
-produce_centrality_histogram <- TRUE # will produce histogram if value is TRUE, otherwise not
+produce_centrality_histogram <- FALSE # will produce histogram if value is TRUE, otherwise not
 histogram_measure <- "degree" # the centrality measure to use for the histogram. Valid values are "degree" and "outdegree"
 
 # Community statistics and visualisations for slices 1763.4 and 1763.5

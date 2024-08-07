@@ -4,12 +4,12 @@
   
 if(text_or_pers=="pers") {
   # Produce the dynamic person network
-  source(paste0(Data_path, "produce_dynamic_pers_network.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_dynamic_pers_network.R"))
   
 } else if (text_or_pers=="text") {
   
   # Produce the dynamic text network
-  source(paste0(Data_path, "produce_dynamic_text_network.R"))
+  source(paste0(Data_path, "analysis_scripts\\produce_dynamic_text_network.R"))
 }
 
 # Produce results for Table 1
