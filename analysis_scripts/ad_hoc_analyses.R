@@ -85,3 +85,27 @@ indegree_all_texts_making_references <- degree(QDC_text_dyn, nodes = ids_all_tex
 indegree_all_texts_making_references <- table(indegree_all_texts_making_references)
 
 rm(ids_all_texts_making_references)
+
+
+
+# How many nodes refer to La Chalotais and to the other texts he refers to?
+
+actor <- "La Chalotais"
+
+ties_sent_to_actor_after_17635 <- QDC_es[QDC_es$`TIE-PERSON`== actor & QDC_es$onset>=17635 & QDC_es$`ACTOR-PERSON` != "La Chalotais",]
+
+persons_refer_to_actor <- QDC_es[QDC_es$`ACTOR-PERSON` %in% ties_sent_to_actor_after_17635$`ACTOR-PERSON`,]
+
+persons_refer_to_actor <- persons_refer_to_actor[persons_refer_to_actor$onset>=17635,]
+
+list_pers <- split(persons_refer_to_actor, f = persons_refer_to_actor$`ACTOR-PERSON`)
+
+persons_referring_to_la_chalotais_and_others <- sapply(list_pers, function(x)  {
+  "La Chalotais" %in% x[,"TIE-PERSON"]*1 +
+    "Rousseau" %in% x[,"TIE-PERSON"]*1 +
+    "D'Alembert" %in% x[,"TIE-PERSON"]*1 +
+    "De l'éducation publique" %in% x[,"TIE-PERSON"]*1})
+
+n_persons_referring_to_la_chalotais_and_others <- length(persons_referring_to_la_chalotais_and_others)
+
+rm(actor, ties_sent_to_actor_after_17635, persons_refer_to_actor)

@@ -49,7 +49,7 @@ Other article analyses, listed below according to article section, can be run by
 
 - Network visualisations resulting from the Louvain and Leiden community detection algorithms (Figures 9-12, Appendices F.1-F.3):  Produced by setting "produce_community_visuals" to TRUE. Uses the Louvain or Leiden algorithms depending on the configurable "cd_algorithm" value set within main.R. Runs the "produce_communities.R" and "produce_community_visuals.R" files.
 - Modularity statistics (Appendices C-D) and charts (Figure 13, Appendix E) resulting from running the Louvain and Leiden algorithms: Produced by setting "produce_modularity_stats" to TRUE. Uses the Louvain or Leiden algorithms depending on the configurable "cd_algorithm" value set within main.R. Runs the "produce_communities.R" and "produce_modularity_stats.R" files.
-- Co-references between La Chalotais, Rousseau, D'Alembert, and De l'Education Publique: produced by setting "run_ad_hoc_analyses" to TRUE. Results are stored in the "XXX" objects.
+- Co-references between La Chalotais, Rousseau, D'Alembert, and De l'Education Publique: produced by setting "run_ad_hoc_analyses" to TRUE. The "persons_referring_to_la_chalotais_and_others" object stores the names of persons who refer to Chalotais and to one of the other actors, and how many of the other actors they refer to. "n_persons_referring_to_la_chalotais_and_others" records how many of these persons there are.
 
 ### 4 Results: Preferential Attachment
 
