@@ -29,7 +29,7 @@ slice_interval <- 1 # this value ordinarily does not change.
 
 # Do you want to produce outputs from the Text or Person networks?
 
-text_or_pers <- "text" # write "text" for text network or "pers" for person network here
+text_or_pers <- "pers" # write "text" for text network or "pers" for person network here
 
 # Do you want to produce dynamic visualisationsrom this network?
 
@@ -58,6 +58,17 @@ produce_modularity_stats <- FALSE # will produce modularity statistics if value 
 # Do you want to produce visualisations of QDC communities for slices 1763.4 and 1763.5?
 
 produce_community_visuals <- FALSE # will produce community visuals if value is TRUE, otherwise not
+
+# Do you want to produce ad-hoc analyses?
+
+produce_ad_hoc_analyses <- FALSE # will produce ad_hoc_analyses if value is TRUE, otherwise not
+
+
+
+
+
+
+
 
 ##### Processing #####
 
@@ -117,6 +128,9 @@ if (produce_community_visuals == TRUE) {
   source(paste0(Data_path, "analysis_scripts\\produce_communities.R"))
 }
 
+if (produce_ad_hoc_analyses == TRUE) {
+  source(paste0(Data_path, "analysis_scripts\\ad_hoc_analyses.R"))
+}
 
 
 
