@@ -68,19 +68,19 @@ R Version 4.1.3, as well as the following packages and package versions, were us
 | **package** | **version number** |
 |---|---|
 | base R packages (base, stats etc.) | 4.1.3 |
-| abind | |
-| Cairo |  |
-| data.table |   |
-| dplyr |   |
-| extrafont  |   |
-| ggplot2  |   |
-| igraph |  |
-| intergraph |  |
-| ndtv |  |
-| network |  |
-| networkDynamic |  |
-| rio |  |
-| sna |  |
-| statnet.common |  |
-| tsna |  |
+| abind | 1.4-5 |
+| Cairo | 1.5-9 |
+| data.table | 1.14.8 |
+| dplyr | 1.1.2 |
+| extrafont  | 0.17 |
+| ggplot2  | 3.5.1 |
+| igraph | 1.3.0 |
+| intergraph | 2.0-2 |
+| ndtv | 0.10.0 |
+| network | 1.13.0 |
+| networkDynamic | 0.9.0 |
+| rio | 0.5.16 |
+| sna | 2.4 |
+| statnet.common | 4.0.0 |
+| tsna | 0.2.0 |
 
