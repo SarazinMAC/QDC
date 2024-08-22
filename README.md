@@ -66,7 +66,7 @@ Other article analyses, listed below according to article section, can be run by
 R Version 4.1.3, as well as the following packages and package versions, were used to produce the article analyses:
 
 | **package** | **version number** |
-|---|---|
+|---|---:|
 | base R packages (base, stats etc.) | 4.1.3 |
 | abind | 1.4-5 |
 | Cairo | 1.5-9 |
