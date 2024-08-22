@@ -2,7 +2,6 @@
 ##### Custom functions - dynamic datasets & visuals #####
 #########################################################
 
-
 # Assign edge spell values of Pre-QdC actors to first onset at which the actors receive a tie
 
 # Actually two functions, one nested in another, because some pre-QDC actors refer to each other

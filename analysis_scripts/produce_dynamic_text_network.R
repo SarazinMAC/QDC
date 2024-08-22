@@ -2,7 +2,6 @@
 ##### Produce dynamic text network #####
 ########################################
 
-
 ##### ____Create Network Dynamic Object for text network #####
 
 

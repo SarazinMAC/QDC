@@ -4,7 +4,6 @@
 
 ## Create and Export histogram of degree/outdegree centrality distribution
 
-
 degree_data <- get(histogram_measure)
 degree_data <- degree_data[nrow(degree_data),]
 

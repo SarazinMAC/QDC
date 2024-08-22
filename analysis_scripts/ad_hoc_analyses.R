@@ -1,7 +1,7 @@
 ###########################
 ##### Ad-hoc analyses #####
 ###########################
-  
+
 if(text_or_pers=="pers") {
   # Produce the dynamic person network
   source(paste0(Data_path, "analysis_scripts\\produce_dynamic_pers_network.R"))

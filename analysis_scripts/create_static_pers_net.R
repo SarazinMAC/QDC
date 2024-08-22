@@ -2,8 +2,6 @@
 ##### create_static_pers_net #####
 ##################################
 
-
-
 #### __Person-based Querelle ####
 
 #### ____Node database - for all potential person nodes (actor-persons, tie-persons, response persons) ####

@@ -2,7 +2,6 @@
 ##### create_static_text_net #####
 ##################################
 
-
 #### __Text-based Querelle ####
 
 #### ____Node database - for all potential text nodes (actor-texts, tie-texts, response texts) ####
