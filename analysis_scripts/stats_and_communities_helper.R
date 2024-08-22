@@ -4,7 +4,6 @@
 
 library(igraph)
 library(tsna)
-library(tergm)
 library(Cairo)
 library(data.table)
 library(ggplot2)
@@ -88,6 +87,6 @@ QDC_es <- assign_pre_QDC_edge_onsets(edge_spells = QDC_es)
 
 # recreate QDC_dyn object
 
-QDC_vs <- QDC_vs[order(QDC_vs$Actor_code),]
+QDC_vs <- QDC_vs[base::order(QDC_vs$Actor_code),]
 
 QDC_dyn <- networkDynamic(vertex.spells = QDC_vs[,1:4], edge.spells = QDC_es[,1:4], create.TEAs = TRUE)

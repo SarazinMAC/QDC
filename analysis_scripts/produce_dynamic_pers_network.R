@@ -75,7 +75,7 @@ QDC_text_resp[,"Quality"] <- 9
 QDC_text_for_pers_net <- rbind(QDC_text_for_pers_net, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
 
-QDC_text_for_pers_net <- QDC_text_for_pers_net[order(QDC_text_for_pers_net$order),]
+QDC_text_for_pers_net <- QDC_text_for_pers_net[base::order(QDC_text_for_pers_net$order),]
 
 QDC_text_for_pers_net$Qual_col <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_for_pers_net$Quality]
 
@@ -141,7 +141,7 @@ QDC_pre_62_edges <- QDC_pre_62_edges[, c("onset","terminus","Actor_code","Tie_co
 QDC_vs_pers_dyn <- QDC_vs_text_dyn
 QDC_vs_pers_dyn$Actor_pers <- text_to_person_mapper$`ACTOR-PERSON`[match(unlist(QDC_vs_pers_dyn$Actor_text), text_to_person_mapper$`ACTOR-TEXT`)]
 QDC_vs_pers_dyn$Actor_code <- QDC_vs$Actor_code[match(unlist(QDC_vs_pers_dyn$Actor_pers), QDC_vs$Actor_pers)]
-QDC_vs_pers_dyn <- QDC_vs_pers_dyn[order(QDC_vs_pers_dyn$onset, QDC_vs_pers_dyn$order_of_entry),]
+QDC_vs_pers_dyn <- QDC_vs_pers_dyn[base::order(QDC_vs_pers_dyn$onset, QDC_vs_pers_dyn$order_of_entry),]
 QDC_vs_pers_dyn <- QDC_vs_pers_dyn[!duplicated(QDC_vs_pers_dyn$Actor_code),]
 
 rm(text_to_person_mapper)
@@ -155,7 +155,7 @@ QDC_vs <- QDC_vs_pers_dyn
 
 edge_weights_df <- QDC_es
 edge_weights_df[,"num"] <- 1:nrow(edge_weights_df)
-edge_weights_df <- edge_weights_df[order(edge_weights_df$Actor_code, edge_weights_df$Tie_code, edge_weights_df$onset),]
+edge_weights_df <- edge_weights_df[base::order(edge_weights_df$Actor_code, edge_weights_df$Tie_code, edge_weights_df$onset),]
 edge_weights_df[,"ego_alter"] <- paste0(edge_weights_df$Actor_code, "_", edge_weights_df$Tie_code)
 edge_weights_df$edge_weights <- 1
 
@@ -166,7 +166,7 @@ for (rownum in 2:nrow(edge_weights_df)) {
   }
 }
 
-edge_weights_df <- edge_weights_df[order(edge_weights_df$num),]
+edge_weights_df <- edge_weights_df[base::order(edge_weights_df$num),]
 
 ## Attach edge weights back onto QDC_es, and set pre-QDC edge weights to 1
 QDC_es$edge_weights <- edge_weights_df$edge_weights
@@ -198,7 +198,7 @@ QDC_pers_dyn <- networkDynamic(vertex.spells = QDC_vs_dynamic_vis, edge.spells =
 
 #vertex and edge attributes
 
-QDC_pers_attr_dyn <- QDC_pers_nodes[order(QDC_pers_attr$Pers_Name),]
+QDC_pers_attr_dyn <- QDC_pers_nodes[base::order(QDC_pers_attr$Pers_Name),]
 
 for (col in colnames(QDC_pers_attr_dyn)) {
   QDC_pers_dyn %v% col <- QDC_pers_attr_dyn[[col]]
@@ -261,7 +261,7 @@ n_multiple_ties_df <- rbind(n_multiple_ties_df_senders, n_multiple_ties_df_recei
 n_multiple_ties_df <- n_multiple_ties_df[n_multiple_ties_df$edge_weights!=1,]
 n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df, fromLast = TRUE),]
 n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df[,c("onset", "terminus", "Actor_code", "Tie_code", "ACTOR-PERSON", "TIE-PERSON")], fromLast = TRUE),]
-n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$Tie_code),]
+n_multiple_ties_df <- n_multiple_ties_df[base::order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$Tie_code),]
 
 # substract 1 from edge weights (we don't want to count the first edge between ego and alter) before splitting df into multiple df, one per actor
 
@@ -299,7 +299,7 @@ n_multiple_ties_df_initial$onset <- min(QDC_vs_dynamic_vis$onset)
 n_multiple_ties_df <- rbind(n_multiple_ties_df_initial, n_multiple_ties_df)
 
 # remove cases where multiple n_multiple_ties values appear in a slice - keep the largest value
-n_multiple_ties_df <- n_multiple_ties_df[order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$node_edge_weights),]
+n_multiple_ties_df <- n_multiple_ties_df[base::order(n_multiple_ties_df$Actor_code, n_multiple_ties_df$onset, n_multiple_ties_df$node_edge_weights),]
 n_multiple_ties_df <- n_multiple_ties_df[!duplicated(n_multiple_ties_df
                                                      [, c("onset", "terminus", "Actor_code")], fromLast = TRUE),]
 
@@ -321,7 +321,7 @@ for(row in 1:nrow(n_multiple_ties_df)){
 
 QDC_es_dynamic_vis[,"Actor_tie"] <- paste0(QDC_es_dynamic_vis$`ACTOR-PERSON`, "  &#8594 ", QDC_es_dynamic_vis$`TIE-PERSON`)
 QDC_es_dynamic_vis[,"num"] <- 1:nrow(QDC_es_dynamic_vis)
-QDC_es_dynamic_vis <- QDC_es_dynamic_vis[order(QDC_es_dynamic_vis$Actor_tie, QDC_es_dynamic_vis$onset),]
+QDC_es_dynamic_vis <- QDC_es_dynamic_vis[base::order(QDC_es_dynamic_vis$Actor_tie, QDC_es_dynamic_vis$onset),]
 QDC_es_dynamic_vis[,"Tie_name_dyn"] <- QDC_es_dynamic_vis$Tie_name
 
 for (rownum in 2:nrow(QDC_es_dynamic_vis)) {
@@ -331,7 +331,7 @@ for (rownum in 2:nrow(QDC_es_dynamic_vis)) {
   }
 }
 
-QDC_es_dynamic_vis <- QDC_es_dynamic_vis[order(QDC_es_dynamic_vis$num),]
+QDC_es_dynamic_vis <- QDC_es_dynamic_vis[base::order(QDC_es_dynamic_vis$num),]
 QDC_es_dynamic_vis$num=NULL
 
 # loop over edge data to add the dynamic attributes on the edge

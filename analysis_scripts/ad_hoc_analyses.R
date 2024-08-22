@@ -59,9 +59,9 @@ ids_referring_to_rousseau <- unique(
 names_referring_to_rousseau <- unique(
   QDC_es$`ACTOR-TEXT`[QDC_es$`TIE-TEXT`=="Rousseau (1762)"])
 
-indegree_texts_referring_to_rousseau <- degree(QDC_text_dyn, nodes = ids_referring_to_rousseau, cmode = "indegree")
+indegree_texts_referring_to_rousseau <- sna::degree(QDC_text_dyn, nodes = ids_referring_to_rousseau, cmode = "indegree")
 names(indegree_texts_referring_to_rousseau) <- names_referring_to_rousseau
-outdegree_texts_referring_to_rousseau <- degree(QDC_text_dyn, nodes = ids_referring_to_rousseau, cmode = "outdegree")
+outdegree_texts_referring_to_rousseau <- sna::degree(QDC_text_dyn, nodes = ids_referring_to_rousseau, cmode = "outdegree")
 names(outdegree_texts_referring_to_rousseau) <- names_referring_to_rousseau
 
 rm(ids_referring_to_rousseau, names_referring_to_rousseau)

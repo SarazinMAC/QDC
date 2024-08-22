@@ -36,7 +36,7 @@ x$V4[which(is.na(x$V4))] <- 99 #missing data coded 99
 QDC_pers_nodes <- x
 colnames(QDC_pers_nodes) <- c("Pers_Name", "Actor_type", "Gender", "Date")
 QDC_pers_nodes$Pers_Name <- as.character(QDC_pers_nodes$Pers_Name)
-QDC_pers_nodes <- QDC_pers_nodes[order(QDC_pers_nodes$Pers_Name),]
+QDC_pers_nodes <- QDC_pers_nodes[base::order(QDC_pers_nodes$Pers_Name),]
 QDC_pers_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_pers_nodes$Actor_type]
 rm(x)
 

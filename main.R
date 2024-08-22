@@ -69,12 +69,11 @@ produce_ad_hoc_analyses <- FALSE # will produce ad_hoc_analyses if value is TRUE
 
 
 
-
 ##### Processing #####
 
 # import dataset
 
-QDC_file <- import(paste0(Data_path, "original_qdc_datasets\\", Data_name))
+QDC_file <- rio::import(paste0(Data_path, "original_qdc_datasets\\", Data_name))
 
 # Import custom functions
 

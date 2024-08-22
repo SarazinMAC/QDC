@@ -12,7 +12,7 @@ update_edge_spells <- function(spells, spells_to_update, spells_for_updating) {
   onsets <- onsets[complete.cases(onsets),]
   colnames(onsets) <- c("Actor_code", "onsets")
   onsets_for_spells_to_update <- onsets[onsets$Actor_code %in% spells_to_update$Actor_code,]
-  onsets_for_spells_to_update <- onsets_for_spells_to_update[order(onsets_for_spells_to_update$Actor_code, onsets_for_spells_to_update$onsets),]
+  onsets_for_spells_to_update <- onsets_for_spells_to_update[base::order(onsets_for_spells_to_update$Actor_code, onsets_for_spells_to_update$onsets),]
   onsets_for_spells_to_update <- onsets_for_spells_to_update[!duplicated(onsets_for_spells_to_update$Actor_code),]
   spells <- dplyr::left_join(spells, onsets_for_spells_to_update, by = "Actor_code")
   spells$onset[spells$spells_to_update==1] <- spells$onsets[spells$spells_to_update==1]
@@ -41,7 +41,7 @@ turn_years_into_slices <- function(df, actor_colname, year_colname = "Date",
   #TODO: Change round argument to a floor or truncate argument??
   formatted_df <- df[,c(actor_colname, year_colname, order_colname)]
   formatted_df <- formatted_df[!duplicated(formatted_df[,c(actor_colname, year_colname)]),]
-  formatted_df <- formatted_df[order(formatted_df[[order_colname]]),]
+  formatted_df <- formatted_df[base::order(formatted_df[[order_colname]]),]
   formatted_df[[year_colname]] <- as.numeric(as.character(formatted_df[[year_colname]]))
   
   # Extract the number of actors in each year
@@ -105,7 +105,7 @@ create_vertex_spells <- function(main_df, node_attr_df,
   QDC_all <- rbind(QDC_pre_62_nodes, QDC_start_end, QDC_62_89_inversed)
   QDC_vs <- unique(QDC_all[, c(actor_colname, year_colname, order_colname)])
   QDC_vs <- QDC_vs[!is.na(QDC_vs[[actor_colname]]),]
-  QDC_vs <- QDC_vs[order(QDC_vs[[year_colname]], QDC_vs[[order_colname]]),]
+  QDC_vs <- QDC_vs[base::order(QDC_vs[[year_colname]], QDC_vs[[order_colname]]),]
   QDC_vs <- QDC_vs[!duplicated(QDC_vs[[actor_colname]]),]
   colnames(QDC_vs) <- c(final_actor_colname, "onset","order_of_entry")
   QDC_vs$onset <- as.numeric(as.character(QDC_vs$onset))
@@ -199,7 +199,7 @@ create_static_vertex_attr_df <- function(vs_df, node_attr_df, Text_or_pers_name,
   node_attr_df$order_of_entry <- vs_df$order_of_entry[match(
     unlist(node_attr_df[[Text_or_pers_name]]), vs_df[[actor_colname]])]
   
-  QDC_static_attr_dyn <- node_attr_df[order(node_attr_df$node_order_dynamic_vis),]
+  QDC_static_attr_dyn <- node_attr_df[base::order(node_attr_df$node_order_dynamic_vis),]
   return(QDC_static_attr_dyn)
 }
 
@@ -250,7 +250,7 @@ create_dyn_vertex_attr_df <- function(vs_df, es_df, attr_df, Text_or_pers_name, 
   
   onset_of_change <- onset_of_change[, c("Actor_code", "onset")]
   onset_of_change <- unique(onset_of_change)
-  onset_of_change <- onset_of_change[order(onset_of_change$Actor_code, onset_of_change$onset),]
+  onset_of_change <- onset_of_change[base::order(onset_of_change$Actor_code, onset_of_change$onset),]
   onset_of_change <- onset_of_change[!duplicated(onset_of_change$Actor_code),]
   
   vs_df$onset_of_change <- onset_of_change$onset[match(

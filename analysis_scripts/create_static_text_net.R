@@ -44,7 +44,7 @@ QDC_text_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_nodes$Actor_
 
 QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
 QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
-QDC_text_nodes <- QDC_text_nodes[order(QDC_text_nodes$Text_Name),]
+QDC_text_nodes <- QDC_text_nodes[base::order(QDC_text_nodes$Text_Name),]
 
 
 #### ____Create network object ####
@@ -79,7 +79,7 @@ QDC_text_resp[,"Line_type"] <- "dashed"
 
 QDC_text <- rbind(QDC_text, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
-QDC_text <- QDC_text[order(QDC_text$order),]
+QDC_text <- QDC_text[base::order(QDC_text$order),]
 
 QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)
 #QDC_text_net <- network(QDC_text, matrix.type= "edgelist", loops=F, multiple=F, ignore.eval = F)

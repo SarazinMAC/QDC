@@ -20,9 +20,9 @@ if (text_or_pers == "pers") {
 # vertex attributes
 
 if (text_or_pers == "text") {
-  QDC_attr_dyn <- QDC_text_attr[order(QDC_text_attr$Text_Name),]
+  QDC_attr_dyn <- QDC_text_attr[base::order(QDC_text_attr$Text_Name),]
 } else if (text_or_pers == "pers") {
-  QDC_attr_dyn <- QDC_pers_attr[order(QDC_pers_attr$Pers_Name),]
+  QDC_attr_dyn <- QDC_pers_attr[base::order(QDC_pers_attr$Pers_Name),]
 }
 
 for (col in colnames(QDC_attr_dyn)) {
@@ -34,11 +34,11 @@ for (col in colnames(QDC_attr_dyn)) {
 
 if (text_or_pers == "text") {
   vertex_names <- QDC_vs[, c("Actor_code", "Actor_text")]
-  vertex_names <- vertex_names[order(vertex_names$Actor_code),]
+  vertex_names <- vertex_names[base::order(vertex_names$Actor_code),]
   vertex_names <- vertex_names$Actor_text
 } else if (text_or_pers == "pers") {
   vertex_names <- QDC_vs[, c("Actor_code", "Actor_pers")]
-  vertex_names <- vertex_names[order(vertex_names$Actor_code),]
+  vertex_names <- vertex_names[base::order(vertex_names$Actor_code),]
   vertex_names <- vertex_names$Actor_pers
 }
 
