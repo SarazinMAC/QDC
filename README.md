@@ -60,3 +60,27 @@ Other article analyses, listed below according to article section, can be run by
 
 - Statistics on D'Alembert's degree centrality: obtained from the .xlsx files produced by "QDC_stats_by_slice.R". See the "degree" sheet within the outputted file(s).
 - Analysis on balance in the ties sent to D'Alembert and Leroy: obtained from the dynamic visualisations.
+
+## Packages used
+
+R Version 4.1.3, as well as the following packages and package versions, were used to produce the article analyses:
+
+| **package** | **version number** |
+|---|---|
+| base R packages (base, stats etc.) | 4.1.3 |
+| abind | |
+| Cairo |  |
+| data.table |   |
+| dplyr |   |
+| extrafont  |   |
+| ggplot2  |   |
+| igraph |  |
+| intergraph |  |
+| ndtv |  |
+| network |  |
+| networkDynamic |  |
+| rio |  |
+| sna |  |
+| statnet.common |  |
+| tsna |  |
+
