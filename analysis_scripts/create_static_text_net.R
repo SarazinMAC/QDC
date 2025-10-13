@@ -13,7 +13,7 @@ QDC_text <- subset(QDC, select=
                        "Individual or collective of authors (1); Authority or institution (2); Periodical (3)", 
                        "Gender", "Response-TEXT 1", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2",
                        "Place"))
-QDC_text <- QDC_text[!is.na(QDC_text$`ACTOR-TEXT`),]
+QDC_text <- filter_non_na(QDC_text, "ACTOR-TEXT")
 
 
 QDC_text_node_data <- as.data.frame(table(QDC_text$`ACTOR-TEXT`, QDC_text$`Individual or collective of authors (1); Authority or institution (2); Periodical (3)`, QDC_text$Gender, QDC_text$Date)) #This creates a problem when nodes have missing data for any attribute; if they do, then it gives missing values to all attributes
@@ -29,18 +29,15 @@ QDC_text_nodes <- data.frame(QDC_text_nodes[!is.na(QDC_text_nodes)])
 colnames(QDC_text_nodes) <- "Actors"
 
 ## Now fill with attributes using matching
-QDC_text_nodes$Actor_type <- QDC_text_node_data$Actor_type[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$Gender <- QDC_text_node_data$Gender[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
-QDC_text_nodes$Date <- QDC_text_node_data$Date[match(unlist(QDC_text_nodes$Actors), QDC_text_node_data$Text_Name)]
+colnames(QDC_text_nodes) <- "Text_Name"
+QDC_text_nodes <- assign_node_attributes(QDC_text_nodes, QDC_text_node_data, c("Actor_type", "Gender", "Date"))
 QDC_text_nodes$Actor_type <- as.numeric(QDC_text_nodes$Actor_type)
-QDC_text_nodes$Actor_type[which(is.na(QDC_text_nodes$Actor_type))] <- 99 #missing data coded 99
+QDC_text_nodes$Actor_type[is.na(QDC_text_nodes$Actor_type)] <- 99 #missing data coded 99
 QDC_text_nodes$Gender <- as.numeric(QDC_text_nodes$Gender)
-QDC_text_nodes$Gender[which(is.na(QDC_text_nodes$Gender))] <- 99 #missing data coded 99
+QDC_text_nodes$Gender[is.na(QDC_text_nodes$Gender)] <- 99 #missing data coded 99
 QDC_text_nodes$Date <- as.numeric(as.character(QDC_text_nodes$Date))
-QDC_text_nodes$Date[which(is.na(QDC_text_nodes$Date))] <- 99 #missing data coded 99
-colnames(QDC_text_nodes) <- c("Text_Name", "Actor_type", "Gender", "Date")
+QDC_text_nodes$Date[is.na(QDC_text_nodes$Date)] <- 99 #missing data coded 99
 QDC_text_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_nodes$Actor_type]
-
 QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
 QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
 QDC_text_nodes <- QDC_text_nodes[base::order(QDC_text_nodes$Text_Name),]
@@ -119,4 +116,25 @@ QDC_text_net %v% "Type_col" <- c("#74B8F7", "#E831AE", "gold")[QDC_text_net %v% 
 
 ## Colour according to tie quality
 QDC_text_net %e% "Qual_col" <- c("red", "red", "grey61", "chartreuse3", "chartreuse3", "orange", "grey61", "grey61", "gray15")[QDC_text_net %e% "Quality"]
+
+#' Filter dataframe by non-NA in a column
+#' @param df Dataframe
+#' @param colname Column name to check for NA
+#' @return Filtered dataframe
+filter_non_na <- function(df, colname) {
+  df[!is.na(df[[colname]]), ]
+}
+
+#' Assign attributes to a node dataframe using matching
+#' @param nodes_df Dataframe of nodes
+#' @param attr_df Dataframe of attributes
+#' @param attr_names Names of attributes to assign
+#' @param key_col Name of key column for matching
+#' @return Dataframe with attributes assigned
+assign_node_attributes <- function(nodes_df, attr_df, attr_names, key_col = "Text_Name") {
+  for (attr in attr_names) {
+    nodes_df[[attr]] <- attr_df[[attr]][match(unlist(nodes_df[[key_col]]), attr_df[[key_col]])]
+  }
+  return(nodes_df)
+}
 
