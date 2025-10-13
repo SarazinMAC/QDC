@@ -31,12 +31,7 @@ colnames(QDC_text_nodes) <- "Actors"
 ## Now fill with attributes using matching
 colnames(QDC_text_nodes) <- "Text_Name"
 QDC_text_nodes <- assign_node_attributes(QDC_text_nodes, QDC_text_node_data, c("Actor_type", "Gender", "Date"))
-QDC_text_nodes$Actor_type <- as.numeric(QDC_text_nodes$Actor_type)
-QDC_text_nodes$Actor_type[is.na(QDC_text_nodes$Actor_type)] <- 99 #missing data coded 99
-QDC_text_nodes$Gender <- as.numeric(QDC_text_nodes$Gender)
-QDC_text_nodes$Gender[is.na(QDC_text_nodes$Gender)] <- 99 #missing data coded 99
-QDC_text_nodes$Date <- as.numeric(as.character(QDC_text_nodes$Date))
-QDC_text_nodes$Date[is.na(QDC_text_nodes$Date)] <- 99 #missing data coded 99
+QDC_text_nodes <- convert_numeric_and_replace_na(QDC_text_nodes, c("Actor_type", "Gender", "Date"))
 QDC_text_nodes$Type_col <- c("#74B8F7", "#E831AE", "gold")[QDC_text_nodes$Actor_type]
 QDC_text_nodes$Text_Name <- as.character(QDC_text_nodes$Text_Name)
 QDC_text_nodes[,"Corpus_num"] <- as.numeric(row.names(QDC_text_nodes))
@@ -136,5 +131,18 @@ assign_node_attributes <- function(nodes_df, attr_df, attr_names, key_col = "Tex
     nodes_df[[attr]] <- attr_df[[attr]][match(unlist(nodes_df[[key_col]]), attr_df[[key_col]])]
   }
   return(nodes_df)
+}
+
+#' Convert columns to numeric and replace NA with a code
+#' @param df Dataframe
+#' @param columns Character vector of column names to convert
+#' @param na_code Value to use for NA replacement (default 99)
+#' @return Dataframe with specified columns converted and NA replaced
+convert_numeric_and_replace_na <- function(df, columns, na_code = 99) {
+  for (col in columns) {
+    df[[col]] <- as.numeric(df[[col]])
+    df[[col]][is.na(df[[col]])] <- na_code
+  }
+  return(df)
 }
 
