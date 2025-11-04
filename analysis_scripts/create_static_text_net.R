@@ -51,22 +51,7 @@ QDC_text$Quality <- QDC_text$Quality + 3
 QDC_text$Quality[QDC_text$Quality>6] <- QDC_text$Quality[QDC_text$Quality>6]-1
 
 ### Add 'responses' in the querelle as ties - first Response-text 1, then Response-text 2
-
-QDC_text_resp <- QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")]
-QDC_text_resp <- QDC_text_resp[!is.na(QDC_text_resp$`Response-TEXT 1`),]
-QDC_text_resp <- QDC_text_resp[!duplicated(QDC_text_resp[,c("ACTOR-TEXT", "Response-TEXT 1", "Date")]),]
-
-QDC_text_resp_2 <- QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")]
-QDC_text_resp_2 <- QDC_text_resp_2[!is.na(QDC_text_resp_2$`Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2`),]
-QDC_text_resp_2 <- QDC_text_resp_2[!duplicated(QDC_text_resp_2[,c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date")]),]
-
-colnames(QDC_text_resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
-colnames(QDC_text_resp_2) <- colnames(QDC_text_resp)
-
-QDC_text_resp <- rbind(QDC_text_resp, QDC_text_resp_2)
-
-QDC_text_resp[,"Quality"] <- 9
-QDC_text_resp[,"Line_type"] <- "dashed"
+QDC_text_resp <- process_all_response_edges(QDC_62_89)
 
 QDC_text <- rbind(QDC_text, QDC_text_resp)
 rm(QDC_text_resp_2, QDC_text_resp)
@@ -144,5 +129,28 @@ convert_numeric_and_replace_na <- function(df, columns, na_code = 99) {
     df[[col]][is.na(df[[col]])] <- na_code
   }
   return(df)
+}
+
+#' Remove NA and duplicated rows for response edges
+#' @param df Dataframe
+#' @param response_col Name of the response column
+#' @return Cleaned dataframe with columns renamed to standard edge columns
+clean_response_edges <- function(df, response_col) {
+  resp <- df[!is.na(df[[response_col]]), ]
+  resp <- resp[!duplicated(resp[, c("ACTOR-TEXT", response_col, "Date")]), ]
+  colnames(resp) <- c("ACTOR-TEXT", "TIE-TEXT", "Date", "order")
+  return(resp)
+}
+
+#' Process and combine all response edges for the querelle
+#' @param QDC_62_89 Dataframe for 1762-1789
+#' @return Combined and formatted response edge dataframe
+process_all_response_edges <- function(QDC_62_89) {
+  resp1 <- clean_response_edges(QDC_62_89[, c("ACTOR-TEXT", "Response-TEXT 1", "Date", "order")], "Response-TEXT 1")
+  resp2 <- clean_response_edges(QDC_62_89[, c("ACTOR-TEXT", "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2", "Date", "order")], "Does it respond to a SECOND catalyst? If so, which? Response-TEXT 2")
+  resp <- rbind(resp1, resp2)
+  resp$Quality <- 9
+  resp$Line_type <- "dashed"
+  return(resp)
 }
 
